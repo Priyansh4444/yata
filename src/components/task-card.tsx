@@ -1,10 +1,11 @@
+import { Task } from "../types";
+
 export default function TaskCard({
-  header,
-  tags,
+  task
 }: {
-  header: string;
-  tags?: string[];
+  task: Task;
 }) {
+  const { header, tags } = task;
   return (
     <div class="py-2 bg-gray-800 rounded-lg">
       <div class="flex items-center justify-between px-4">
