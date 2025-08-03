@@ -1,4 +1,4 @@
-import { TaskList } from "../types";
+import { TaskList } from "@/types";
 
 export default function TaskListComponent({ tasklist }: { tasklist: TaskList }) {
   const { header, tasks } = tasklist;

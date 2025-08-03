@@ -8,6 +8,14 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
   plugins: [solid(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@": new URL("./src", import.meta.url).pathname,
+      "@components": new URL("./src/components", import.meta.url).pathname,
+      "@utils": new URL("./src/utils", import.meta.url).pathname,
+      "@types": new URL("./src/types", import.meta.url).pathname,
+    },
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
