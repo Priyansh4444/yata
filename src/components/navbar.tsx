@@ -1,4 +1,5 @@
 import { MenuItem } from "../types";
+import BottomDock from "./bottom-dock";
 import HomeIcon from "./icons/home-icon";
 import SettingsIcon from "./icons/settings-icon";
 
@@ -22,7 +23,7 @@ export default function Navbar() {
 
     return (
         <nav>
-
+          <BottomDock menuItems={menuItems} />
         </nav>
     );
 }

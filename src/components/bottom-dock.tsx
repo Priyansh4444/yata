@@ -1,4 +1,5 @@
-export default function BottomDock() {
+import type { MenuItem } from "@/types";
+export default function BottomDock({ menuItems }: { menuItems: MenuItem[] }) {
   return (
     <div class="flex items-center justify-between p-4 bg-gray-800 text-white">
       <div class="flex items-center space-x-4">
