@@ -1,28 +1,11 @@
 import "./App.css";
 import TaskList from "@components/task-list";
+import HeaderText from "./components/header-text";
 
 function App() {
   return (
-    <main class="container">
-      <TaskList
-        tasklist={{
-          header: "My Task List",
-          tasks: [
-            {
-              header: "Task 1",
-              tags: ["urgent", "work"]
-            },
-            {
-              header: "Task 2",
-              tags: ["personal"]  
-            },
-            {
-              header: "Task 3",
-              tags: ["home", "urgent"]
-            }
-          ]
-        }}
-      />
+    <main class="h-screen w-screen bg-transparent text-white p-12">
+      <HeaderText />
     </main>
   );
 }
