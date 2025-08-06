@@ -4,7 +4,7 @@ import BottomDock from "./components/bottom-dock";
 
 function App() {
   return (
-    <main class="h-screen relative w-screen bg-transparent text-white p-12">
+    <main class="h-screen w-screen bg-transparent text-white p-12">
       <HeaderText />
       <BottomDock />
     </main>
