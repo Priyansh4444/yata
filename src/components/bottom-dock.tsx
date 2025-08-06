@@ -14,7 +14,7 @@ export default function BottomDock() {
       href: "/",
       gradient:
         "radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.06) 50%, rgba(29,78,216,0) 100%)",
-      iconColor: "text-[#0093E9]",
+      iconColor: "group-hover:text-blue-500",
     },
     {
       icon: SettingsIcon,
@@ -22,7 +22,7 @@ export default function BottomDock() {
       href: "/settings",
       gradient:
         "radial-gradient(circle, rgba(34,197,94,0.15) 0%, rgba(22,163,74,0.06) 50%, rgba(21,128,61,0) 100%)",
-      iconColor: "text-[#0093E9]",
+      iconColor: "group-hover:text-green-500",
     },
   ];
 
@@ -30,21 +30,25 @@ export default function BottomDock() {
     applyHoverAnimations();
   });
   return (
-    <nav class="fixed bottom-4 left-1/2 -translate-x-1/2 p-2 rounded-2xl bg-neutral-900/10 backdrop-blur-lg border border-white/10 shadow-lg">
+    <nav class="fixed bottom-4 left-1/2 -translate-x-1/2 py-2 px-4 rounded-2xl bg-neutral-900/10 backdrop-blur-lg border border-white/10 shadow-lg overflow-hidden">
       <div
-        class={`nav-glow-variants absolute -inset-2 bg-gradient-radial from-transparent via-blue-400/30 via-30% via-purple-400/30 via-60% via-red-400/30 via-90% to-transparent rounded-3xl z-0 pointer-events-none`}
+        class="nav-glow-variants absolute inset-0 z-0 pointer-events-none opacity-0 rounded-2xl"
+        style={{
+          background:
+            "radial-gradient(circle, transparent 0%, rgba(59,130,246,0.1) 30%, rgba(147,51,234,0.1) 60%, rgba(239,68,68,0.1) 90%, transparent 100%)",
+        }}
       />
       <ul class="flex items-center gap-2 relative z-10">
         <For each={menuItems}>
           {(item) => (
-            <li class="relative">
+            <li class="relative group">
               {/* Container */}
               <div
-                class="menu-item-container block rounded-xl overflow-visible group relative"
+                class="menu-item-container block rounded-xl overflow-visible relative"
                 style={{ perspective: "600px" }}
               >
                 <div
-                  class={`nav-glow-item absolute inset-0 z-0 pointer-events-none rounded-2xl`}
+                  class="nav-glow-item absolute inset-0 z-0 pointer-events-none rounded-xl opacity-0"
                   style={{
                     background: item.gradient,
                   }}
@@ -54,14 +58,14 @@ export default function BottomDock() {
                 {/* Front face of the button */}
                 <a
                   href={item.href}
-                  class="nav-item flex items-center gap-2 px-4 py-2 relative z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
+                  class="nav-item flex items-center gap-2 px-4 py-2 relative z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors duration-500 rounded-xl"
                 >
                   <span
-                    class={`transition-colors duration-300 group-hover:${item.iconColor} text-foreground`}
+                    class={`transition-colors duration-300 ${item.iconColor}`}
                   >
                     {item.icon}
                   </span>
-                  <span>{item.label}</span>
+                  <span class="text-foreground">{item.label}</span>
                 </a>
 
                 {/* Back face of the button */}
@@ -70,11 +74,11 @@ export default function BottomDock() {
                   class="nav-item-back flex items-center gap-2 px-4 py-2 absolute inset-0 z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
                 >
                   <span
-                    class={`transition-colors duration-300 group-hover:${item.iconColor} text-foreground`}
+                    class={`transition-colors duration-300 ${item.iconColor}`}
                   >
                     {item.icon}
                   </span>
-                  <span>{item.label}</span>
+                  <span class="text-foreground">{item.label}</span>
                 </a>
               </div>
             </li>
@@ -89,6 +93,7 @@ function applyHoverAnimations() {
   // Select all the stable parent containers
   const $containers = utils.$(".menu-item-container");
   const { linear } = eases;
+
   $containers.forEach((container) => {
     // Find the children *within each container*
     const $item = container.querySelector(".nav-item")!;
@@ -146,7 +151,6 @@ function applyHoverAnimations() {
             damping: 25,
           }),
         },
-
         ...animationConfig,
       });
     });
@@ -159,13 +163,13 @@ function applyHoverAnimations() {
         ...animationConfig,
       });
       animate($itemBack, {
-        rotateX: -90,
+        rotateX: 90,
         opacity: 0,
         ...animationConfig,
       });
       animate($glow, {
         opacity: 0,
-        scale: 0.9,
+        scale: 0.8,
         ...animationConfig,
       });
     });
