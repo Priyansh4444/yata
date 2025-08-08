@@ -12,6 +12,8 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@corvu/drawer": "^0.2.4",
+    "@kobalte/core": "^0.13.11",
     "@tailwindcss/vite": "^4.1.11",
     "@tauri-apps/api": "^2.7.0",
     "@tauri-apps/plugin-opener": "^2.4.0",

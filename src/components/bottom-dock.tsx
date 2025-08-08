@@ -14,7 +14,7 @@ export default function BottomDock() {
       href: "/",
       gradient:
         "radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.06) 50%, rgba(29,78,216,0) 100%)",
-      iconColor: "group-hover:text-blue-500",
+      iconColor: "group-hover:text-blue-400",
     },
     {
       icon: SettingsIcon,
@@ -22,7 +22,7 @@ export default function BottomDock() {
       href: "/settings",
       gradient:
         "radial-gradient(circle, rgba(34,197,94,0.15) 0%, rgba(22,163,74,0.06) 50%, rgba(21,128,61,0) 100%)",
-      iconColor: "group-hover:text-green-500",
+      iconColor: "group-hover:text-green-400",
     },
   ];
 
@@ -30,7 +30,7 @@ export default function BottomDock() {
     applyHoverAnimations();
   });
   return (
-    <nav class="fixed bottom-4 left-1/2 -translate-x-1/2 py-2 px-4 rounded-2xl bg-neutral-900/10 backdrop-blur-lg border border-white/10 shadow-lg overflow-hidden">
+    <nav class="fixed bottom-4 text-white left-1/2 -translate-x-1/2 py-2 px-4 rounded-2xl bg-neutral-900/10 backdrop-blur-lg border border-white/10 shadow-lg overflow-hidden">
       <div
         class="nav-glow-variants absolute inset-0 z-0 pointer-events-none opacity-0 rounded-2xl"
         style={{

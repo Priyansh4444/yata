@@ -1,5 +1,6 @@
 export type Task = {
   header: string;
+  description?: string;
   tags?: string[];
 };
 

@@ -16,6 +16,7 @@ export default defineConfig(async () => ({
       "@types": new URL("./src/types", import.meta.url).pathname,
     },
   },
+  assetsInclude: ["fonts/*"],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
