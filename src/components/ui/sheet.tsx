@@ -15,16 +15,16 @@ export const Sheet = DialogPrimitive;
 export const SheetTrigger = DialogPrimitive.Trigger;
 
 export const sheetVariants = cva(
-	"fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[expanded]:animate-in data-[closed]:animate-out data-[expanded]:duration-200 data-[closed]:duration-200",
+	"fixed z-50 gap-4 bg-black/60 backdrop-blur-xl border border-white/10 p-6 shadow-lg transition ease-in-out data-[expanded]:animate-in data-[closed]:animate-out data-[expanded]:duration-200 data-[closed]:duration-200",
 	{
 		variants: {
 			side: {
 				top: "inset-x-0 top-0 border-b data-[closed]:slide-out-to-top data-[expanded]:slide-in-from-top",
 				bottom:
 					"inset-x-0 bottom-0 border-t data-[closed]:slide-out-to-bottom data-[expanded]:slide-in-from-bottom",
-				left: "inset-y-0 left-0 h-full w-3/4 border-r data-[closed]:slide-out-to-left data-[expanded]:slide-in-from-left sm:max-w-sm",
+				left: "inset-y-0 left-0 h-full w-[92vw] sm:w-[75vw] border-r data-[closed]:slide-out-to-left data-[expanded]:slide-in-from-left",
 				right:
-					"inset-y-0 right-0 h-full w-3/4 border-l data-[closed]:slide-out-to-right data-[expanded]:slide-in-from-right sm:max-w-sm",
+					"inset-y-0 right-0 h-full w-[92vw] sm:w-[75vw] border-l data-[closed]:slide-out-to-right data-[expanded]:slide-in-from-right",
 			},
 		},
 		defaultVariants: {
@@ -35,9 +35,9 @@ export const sheetVariants = cva(
 
 type sheetContentProps<T extends ValidComponent = "div"> = ParentProps<
 	DialogContentProps<T> &
-		VariantProps<typeof sheetVariants> & {
-			class?: string;
-		}
+	VariantProps<typeof sheetVariants> & {
+		class?: string;
+	}
 >;
 
 export const SheetContent = <T extends ValidComponent = "div">(
@@ -54,7 +54,7 @@ export const SheetContent = <T extends ValidComponent = "div">(
 		<DialogPrimitive.Portal>
 			<DialogPrimitive.Overlay
 				class={cn(
-					"fixed inset-0 z-50 bg-background/80 data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0",
+					"fixed inset-0 z-50 bg-black/50 backdrop-blur-xl data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0",
 				)}
 			/>
 			<DialogPrimitive.Content
@@ -95,7 +95,7 @@ export const SheetTitle = <T extends ValidComponent = "h2">(
 
 	return (
 		<DialogPrimitive.Title
-			class={cn("text-lg font-semibold text-foreground", local.class)}
+			class={cn("text-2xl sm:text-3xl font-semibold text-foreground font-inter", local.class)}
 			{...rest}
 		/>
 	);
@@ -113,7 +113,7 @@ export const SheetDescription = <T extends ValidComponent = "p">(
 
 	return (
 		<DialogPrimitive.Description
-			class={cn("text-sm text-muted-foreground", local.class)}
+			class={cn("text-sm sm:text-base text-muted-foreground font-inter", local.class)}
 			{...rest}
 		/>
 	);

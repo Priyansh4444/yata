@@ -1,47 +1,50 @@
 import { Task } from "../types";
+import TagBadge from "@components/tags/tag-badge";
 
-export default function TaskCard({ task }: { task: Task }) {
-  const { header, tags, description } = task;
+export default function TaskCard({ task, onOpen, onAddTags }: { task: Task; onOpen?: () => void; onAddTags?: () => void }) {
+  const { header } = task;
+  const hasTags = (task.tags?.length ?? 0) > 0;
+
+  function handleAddTagsClick(event: MouseEvent) {
+    // Prevent the card's onClick (which opens the sheet) from firing
+    event.stopPropagation();
+    if (onAddTags) onAddTags();
+  }
 
   return (
     <article
       class="
-        task-card group relative rounded-xl p-4
+        task-card group relative rounded-xl p-6 min-h-[110px]
         bg-black/50 backdrop-blur-sm
         border border-white/5
         shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_8px_24px_-12px_rgba(0,0,0,0.8)]
         hover:border-white/10
         transition-colors duration-150
-        cursor-grab active:cursor-grabbing
+        cursor-pointer
       "
+      onClick={onOpen}
     >
       <header class="flex items-start justify-between gap-3">
-        <h2 class="text-sm font-medium text-zinc-100 leading-snug line-clamp-2">
+        <h2 class="text-base sm:text-lg font-semibold text-zinc-100 leading-snug line-clamp-2">
           {header}
         </h2>
-
-        {tags && tags.length > 0 && (
-          <div class="flex flex-wrap gap-1.5 shrink-0">
-            {tags.map((tag) => (
-              <span class="px-2 py-0.5 text-[10px] rounded-md bg-white/5 text-zinc-300 border border-white/10">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
       </header>
 
-      <div class="mt-2.5">
-        <p class="text-xs text-zinc-400/90 leading-relaxed">
-          {description || ""}
-        </p>
+      <div class="mt-3 min-h-[24px] flex flex-wrap gap-1.5">
+        {hasTags ? (
+          (task.tags || []).map((tag) => <TagBadge tag={tag} />)
+        ) : (
+          <button
+            type="button"
+            class="px-2 py-0.5 text-[11px] rounded-md border border-dashed border-white/10 text-zinc-500/70 opacity-80 group-hover:opacity-100 transition-opacity bg-transparent"
+            onClick={handleAddTagsClick}
+            aria-label="Add tags inline"
+            title="Add tags"
+          >
+            + Add tags
+          </button>
+        )}
       </div>
-
-      <footer class="mt-3">
-        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] bg-white/5 text-zinc-400 border border-white/10">
-          • Todo
-        </span>
-      </footer>
 
       <div
         class="

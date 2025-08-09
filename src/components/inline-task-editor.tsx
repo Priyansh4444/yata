@@ -1,28 +1,53 @@
 import { createMemo } from "solid-js";
 import { createStore } from "solid-js/store";
-import type { Task } from "@/types";
+import type { Task, Tag } from "@/types";
+import TagPicker from "@components/tags/tag-picker";
 
 type Props = {
   onSave: (task: Task) => void;
   onCancel: () => void;
   initial?: Partial<Task>;
+  existingTags?: Tag[];
 };
 
-export default function InlineTaskEditor({onSave, onCancel, initial}: Props) {
-  const [draft, setDraft] = createStore<Task>({
+export default function InlineTaskEditor(props: Props) {
+  const { onSave, onCancel, initial } = props;
+  type FormState = {
+    header: string;
+    description: string | undefined;
+    tags: Tag[];
+  };
+
+  const [form, setForm] = createStore<FormState>({
     header: initial?.header ?? "",
     description: initial?.description,
-    tags: initial?.tags ?? [],
+    tags: (initial?.tags ?? []) as Tag[],
   });
 
-  const canSave = createMemo(() => draft.header.trim().length > 0);
+  const canSave = createMemo(() => form.header.trim().length > 0);
+
+  function onTagsChange(tags: Tag[]) {
+    setForm("tags", tags);
+  }
+
+  function handleHeaderInput(e: InputEvent & { currentTarget: HTMLInputElement }) {
+    setForm("header", e.currentTarget.value);
+  }
+
+  function handleDescriptionInput(
+    e: InputEvent & { currentTarget: HTMLTextAreaElement },
+  ) {
+    setForm("description", e.currentTarget.value);
+  }
+
+  // no-op placeholder removed; TagPicker manages its own inputs
 
   function onSubmit() {
     if (!canSave()) return onCancel();
     const task: Task = {
-      header: draft.header.trim(),
-      description: draft.description?.trim() || undefined,
-      tags: (draft.tags ?? []).map((t) => t.trim()).filter(Boolean),
+      header: form.header.trim(),
+      description: form.description?.trim() || undefined,
+      tags: form.tags,
     };
     onSave(task);
   }
@@ -32,31 +57,18 @@ export default function InlineTaskEditor({onSave, onCancel, initial}: Props) {
       <input
         class="w-full bg-transparent text-sm text-zinc-100 placeholder-zinc-500 outline-none"
         placeholder="Task title"
-        value={draft.header}
-        onInput={(e) => setDraft("header", e.currentTarget.value)}
+        value={form.header}
+        onInput={handleHeaderInput}
         autofocus
       />
       <textarea
         class="w-full bg-transparent text-xs text-zinc-400 placeholder-zinc-600 outline-none resize-none"
         rows={3}
         placeholder="Description (optional)"
-        value={draft.description || ""}
-        onInput={(e) => setDraft("description", e.currentTarget.value)}
+        value={form.description || ""}
+        onInput={handleDescriptionInput}
       />
-      <input
-        class="w-full bg-transparent text-[11px] text-zinc-300 placeholder-zinc-600 outline-none"
-        placeholder="tags, comma,separated"
-        value={(draft.tags ?? []).join(", ")}
-        onInput={(e) =>
-          setDraft(
-            "tags",
-            e.currentTarget.value
-              .split(",")
-              .map((t) => t.trim())
-              .filter(Boolean)
-          )
-        }
-      />
+      <TagPicker value={form.tags} onChange={onTagsChange} suggestions={props.existingTags} />
       <div class="pt-1 flex items-center gap-2">
         <button
           type="button"

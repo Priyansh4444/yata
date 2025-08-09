@@ -31,19 +31,19 @@ export const DrawerContent = <T extends ValidComponent = "div">(
 	return (
 		<DrawerPrimitive.Portal>
 			<DrawerPrimitive.Overlay
-				class="fixed inset-0 z-50 data-[transitioning]:transition-colors data-[transitioning]:duration-200"
+				class="fixed inset-0 z-50 backdrop-blur-xl data-[transitioning]:transition-[backdrop-filter,background-color] data-[transitioning]:duration-200"
 				style={{
-					"background-color": `hsl(var(--background) / ${0.8 * ctx.openPercentage()})`,
+					"background-color": `rgba(0,0,0,${0.7 * ctx.openPercentage()})`,
 				}}
 			/>
 			<DrawerPrimitive.Content
 				class={cn(
-					"fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-xl border bg-background after:absolute after:inset-x-0 after:top-full after:h-[50%] after:bg-inherit data-[transitioning]:transition-transform data-[transitioning]:duration-200 md:select-none",
+					"fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-xl border bg-black/60 backdrop-blur-xl after:absolute after:inset-x-0 after:top-full after:h-[50%] after:bg-inherit data-[transitioning]:transition-transform data-[transitioning]:duration-200 md:select-none",
 					local.class,
 				)}
 				{...rest}
 			>
-				<div class="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
+				<div class="mx-auto mt-4 h-2 w-[100px] rounded-full bg-white/20" />
 				{local.children}
 			</DrawerPrimitive.Content>
 		</DrawerPrimitive.Portal>
