@@ -4,7 +4,7 @@ import type { Task, Tag } from "@/types";
 import TagPicker from "@components/tags/tag-picker";
 
 type Props = {
-  onSave: (task: Task) => void;
+  onSave: (updates: Partial<Task>) => void;
   onCancel: () => void;
   initial?: Partial<Task>;
   existingTags?: Tag[];
@@ -16,12 +16,17 @@ export default function InlineTaskEditor(props: Props) {
     header: string;
     description: string | undefined;
     tags: Tag[];
+    priority: Task["priority"];
+    // Keep dueDate as an ISO date string for the input; convert before save
+    dueDate: string | undefined;
   };
 
   const [form, setForm] = createStore<FormState>({
     header: initial?.header ?? "",
     description: initial?.description,
     tags: (initial?.tags ?? []) as Tag[],
+    priority: initial?.priority,
+    dueDate: initial?.dueDate ? new Date(initial.dueDate).toISOString().slice(0, 10) : undefined,
   });
 
   const canSave = createMemo(() => form.header.trim().length > 0);
@@ -46,12 +51,14 @@ export default function InlineTaskEditor(props: Props) {
 
   function onSubmit() {
     if (!canSave()) return onCancel();
-    const task: Task = {
+    const updates: Partial<Task> = {
       header: form.header.trim(),
       description: form.description?.trim() || undefined,
       tags: form.tags,
+      priority: form.priority,
+      dueDate: form.dueDate ? new Date(form.dueDate) : undefined,
     };
-    onSave(task);
+    onSave(updates);
   }
 
   return (
@@ -70,6 +77,25 @@ export default function InlineTaskEditor(props: Props) {
         value={form.description || ""}
         onInput={handleDescriptionInput}
       />
+      <div class="flex items-center gap-2">
+        <select
+          class="bg-transparent text-xs text-zinc-300 border border-white/10 rounded-md px-2 py-1"
+          value={form.priority ?? ""}
+          onChange={(e) =>
+            setForm("priority", (e.currentTarget.value || undefined) as Task["priority"]) }
+        >
+          <option value="" class="bg-black">Priority</option>
+          <option value="low" class="bg-black">Low</option>
+          <option value="medium" class="bg-black">Medium</option>
+          <option value="high" class="bg-black">High</option>
+        </select>
+        <input
+          type="date"
+          class="bg-transparent text-xs text-zinc-300 border border-white/10 rounded-md px-2 py-1"
+          value={form.dueDate ?? ""}
+          onInput={(e) => setForm("dueDate", e.currentTarget.value || undefined)}
+        />
+      </div>
       <TagPicker
         value={form.tags}
         onChange={onTagsChange}
