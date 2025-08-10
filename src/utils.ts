@@ -6,15 +6,32 @@ function createTask(
   name: string,
   tags?: (string | Tag)[],
   description?: string,
+  options?: {
+    priority?: Task["priority"];
+    dueDate?: Date | string;
+    isDraft?: boolean;
+    completedAt?: Date | string;
+  },
 ): Task {
+  const normalizedTags = (tags ?? []).map((t) =>
+    typeof t === "string"
+      ? { label: t, color: DEFAULT_TAG_COLOR }
+      : { ...t, color: (t.color ?? DEFAULT_TAG_COLOR) as HexColor },
+  );
+  const dueDate = options?.dueDate ? new Date(options.dueDate) : undefined;
+  const completedAt = options?.completedAt
+    ? new Date(options.completedAt)
+    : undefined;
   return {
+    id: generateUID(),
     header: name,
+    isDraft: options?.isDraft ?? false,
+    createdAt: new Date(),
+    dueDate,
+    completedAt,
+    priority: options?.priority,
     description,
-    tags: (tags ?? []).map((t) =>
-      typeof t === "string"
-        ? { label: t, color: DEFAULT_TAG_COLOR }
-        : { ...t, color: t.color ?? DEFAULT_TAG_COLOR },
-    ),
+    tags: normalizedTags,
   };
 }
 
@@ -50,7 +67,24 @@ function generateRandomTasks(count: number): Task[] {
         : [];
     const description =
       Math.random() > 0.4 ? "Task description goes here..." : undefined;
-    tasks.push(createTask(taskName, tags, description));
+    const priorityRoll = Math.random();
+    const priority: Task["priority"] =
+      priorityRoll > 0.8
+        ? "high"
+        : priorityRoll > 0.5
+          ? "medium"
+          : Math.random() > 0.5
+            ? "low"
+            : undefined;
+    const dueDate = Math.random() > 0.6
+      ? daysFromNow(Math.floor(Math.random() * 14) + 1)
+      : undefined;
+    tasks.push(
+      createTask(taskName, tags, description, {
+        priority,
+        dueDate,
+      }),
+    );
   }
   return tasks;
 }
@@ -76,3 +110,9 @@ function generateRandomTaskLists(count: number): TaskList[] {
 }
 
 export { generateRandomTaskLists };
+
+function daysFromNow(days: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d;
+}
