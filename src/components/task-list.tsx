@@ -1,9 +1,9 @@
 import { For, Show, createMemo, createSignal } from "solid-js";
-import { Task, TaskList } from "../types";
-import TaskCard from "./task-card";
-import InlineTaskEditor from "./inline-task-editor";
+import { Task, TaskList } from "@/types";
+import TaskCard from "@components/task-card";
+import InlineTaskEditor from "@components/inline-task-editor";
 import type { Tag } from "@/types";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@components/ui/sheet";
 
 export default function KanbanList({ taskList }: { taskList: TaskList }) {
   const [tasks, setTasks] = createSignal<Task[]>(taskList.tasks);

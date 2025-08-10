@@ -8,6 +8,8 @@ export default function TaskCard({ task, onOpen, onAddTags }: { task: Task; onOp
   function handleAddTagsClick(event: MouseEvent) {
     // Prevent the card's onClick (which opens the sheet) from firing
     event.stopPropagation();
+    // Also prevent default to avoid any odd focus behavior
+    event.preventDefault();
     if (onAddTags) onAddTags();
   }
 
@@ -38,6 +40,8 @@ export default function TaskCard({ task, onOpen, onAddTags }: { task: Task; onOp
             type="button"
             class="px-2 py-0.5 text-[11px] rounded-md border border-dashed border-white/10 text-zinc-500/70 opacity-80 group-hover:opacity-100 transition-opacity bg-transparent"
             onClick={handleAddTagsClick}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             aria-label="Add tags inline"
             title="Add tags"
           >
