@@ -1,8 +1,7 @@
 import { For, Show, createMemo, createSignal } from "solid-js";
-import { Task, TaskList } from "@/types";
+import { Task, TaskList, Tag } from "@/types";
 import TaskCard from "@components/task-card";
 import InlineTaskEditor from "@components/inline-task-editor";
-import type { Tag } from "@/types";
 import {
   Sheet,
   SheetContent,
@@ -10,45 +9,115 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@components/ui/sheet";
+import { generateUID } from "@/utils";
+import { cn } from "@/libs/cn";
 
-export default function KanbanList({ taskList }: { taskList: TaskList }) {
+export default function KanbanList({
+  taskList,
+  onRenameList,
+}: {
+  taskList: TaskList;
+  onRenameList?: (name: string) => void;
+}) {
   const [tasks, setTasks] = createSignal<Task[]>(taskList.tasks);
-  // Single source of truth for inline editor state
-  const [editor, setEditor] = createSignal<{
-    task: Task;
-    index: number | null;
-  } | null>(null);
   const [openTaskIndex, setOpenTaskIndex] = createSignal<number | null>(null);
 
-  function handleSave(task: Task) {
-    const state = editor();
-    const idx = state?.index ?? null;
-    if (idx === null) {
-      setTasks((prev) => [...prev, task]);
-    } else {
-      setTasks((prev) => prev.map((t, i) => (i === idx ? task : t)));
-    }
-    setEditor(null);
-  }
+  const hasDraft = createMemo(() => tasks().some((t) => t.isDraft));
 
-  // Suggestions built from current list content (unique by label, case-insensitive)
-  const existingTags = createMemo<Tag[]>(() =>
-    Array.from(
-      new Map(
-        tasks()
-          .flatMap((t) => t.tags ?? [])
-          .map((t) => [t.label.toLowerCase(), t]),
-      ).values(),
-    ),
+  const openTask = createMemo(() =>
+    openTaskIndex() !== null ? tasks()[openTaskIndex()!] : null,
+  );
+  const priority = createMemo(() => openTask()?.priority);
+  const sheetBorderClass = createMemo(() =>
+    priority() === "low"
+      ? "border-emerald-500/30"
+      : priority() === "medium"
+        ? "border-amber-500/35"
+        : priority() === "high"
+          ? "border-rose-600/40"
+          : "border-white/10",
+  );
+  const titleTextClass = createMemo(() =>
+    priority() === "low"
+      ? "text-emerald-100"
+      : priority() === "medium"
+        ? "text-amber-100"
+        : priority() === "high"
+          ? "text-rose-100"
+          : "text-zinc-100",
+  );
+  const metaTextClass = createMemo(() =>
+    priority() === "low"
+      ? "text-emerald-300/80"
+      : priority() === "medium"
+        ? "text-amber-300/80"
+        : priority() === "high"
+          ? "text-rose-300/80"
+          : "text-zinc-400",
   );
 
-  function startAddNew() {
-    setEditor({ task: { header: "", description: "", tags: [] }, index: null });
-  }
+  const existingTags = createMemo<Tag[]>(() => {
+    const map = new Map<string, Tag>();
+    for (const t of tasks()) {
+      for (const tag of t.tags ?? []) {
+        const key = tag.label.toLowerCase();
+        if (!map.has(key)) map.set(key, tag);
+      }
+    }
+    return Array.from(map.values());
+  });
 
   function startEditAt(index: number) {
-    const item = tasks()[index];
-    setEditor({ task: item, index });
+    setTasks((prev) =>
+      prev.map((t, i) => (i === index ? { ...t, isDraft: true } : t)),
+    );
+  }
+
+  function startAddNew() {
+    const newTask: Task = {
+      id: generateUID(),
+      header: "",
+      isDraft: true,
+      createdAt: new Date(),
+      description: undefined,
+      tags: [],
+      priority: undefined,
+      dueDate: undefined,
+      completedAt: undefined,
+    };
+    setTasks((prev) => [newTask, ...prev]);
+  }
+
+  function handleSave(index: number, updates: Partial<Task>) {
+    setTasks((prev) =>
+      prev.map((t, i) =>
+        i === index
+          ? {
+            ...t,
+            header: updates.header?.trim() ?? t.header,
+            description: updates.description ?? t.description,
+            tags: updates.tags ?? t.tags,
+            priority: updates.priority ?? t.priority,
+            dueDate: updates.dueDate ?? t.dueDate,
+            isDraft: false,
+          }
+          : t,
+      ),
+    );
+  }
+
+  function handleCancel(index: number) {
+    const t = tasks()[index];
+    if (!t) return;
+    if ((t.header ?? "").trim() === "") {
+      setTasks((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      setTasks((prev) =>
+        prev.map((task, i) =>
+          i === index ? { ...task, isDraft: false } : task,
+        ),
+      );
+    }
   }
 
   return (
@@ -72,9 +141,10 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
       >
         <div class="flex items-center gap-2">
           <span class="h-2 w-2 rounded-full bg-emerald-400/80 shadow-[0_0_8px_1px_rgba(16,185,129,0.5)]" />
-          <h3 class="text-sm font-medium text-zinc-100 tracking-wide">
-            {taskList.header}
-          </h3>
+          <InlineListTitle
+            value={taskList.header}
+            onSave={(v) => onRenameList?.(v)}
+          />
         </div>
         <span
           class="
@@ -89,9 +159,7 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
       <div
         class="
           flex-1 overflow-y-auto px-3 pt-4 pb-8 space-y-4
-          scrollbar-thin
-          scrollbar-track-transparent
-          scrollbar-thumb-zinc-900/80 hover:scrollbar-thumb-zinc-700/80
+          scrollbar-black
         "
       >
         <Show
@@ -109,13 +177,12 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
           }
         >
           <For each={tasks()}>
-            {(task, i) => {
-              const ed = editor();
-              return ed && ed.index === i() ? (
+            {(task, i) =>
+              task.isDraft ? (
                 <InlineTaskEditor
-                  initial={ed.task}
-                  onSave={handleSave}
-                  onCancel={() => setEditor(null)}
+                  initial={task}
+                  onSave={(u) => handleSave(i(), u)}
+                  onCancel={() => handleCancel(i())}
                   existingTags={existingTags()}
                 />
               ) : (
@@ -124,17 +191,9 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
                   onOpen={() => setOpenTaskIndex(i())}
                   onAddTags={() => startEditAt(i())}
                 />
-              );
-            }}
+              )
+            }
           </For>
-          <Show when={!!editor() && editor()!.index === null}>
-            <InlineTaskEditor
-              initial={editor()!.task}
-              onSave={handleSave}
-              onCancel={() => setEditor(null)}
-              existingTags={existingTags()}
-            />
-          </Show>
         </Show>
       </div>
 
@@ -151,7 +210,7 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
               disabled:opacity-50 disabled:cursor-not-allowed
             "
           type="button"
-          disabled={!!editor()}
+          disabled={hasDraft()}
           onClick={startAddNew}
         >
           + Add task
@@ -163,18 +222,34 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
       >
         <SheetContent
           side="right"
-          class="bg-black/50 backdrop-blur-xl border-white/10 p-5"
+          class={cn("bg-black/50 backdrop-blur-xl p-5 border", sheetBorderClass())}
         >
           <SheetHeader>
             <SheetDescription class="text-sm tracking-wide text-zinc-500">
               In list: <span class="text-zinc-300">{taskList.header}</span>
             </SheetDescription>
-            <SheetTitle class="text-4xl sm:text-5xl md:text-6xl leading-tight text-zinc-100">
-              {openTaskIndex() !== null ? tasks()[openTaskIndex()!].header : ""}
+            <SheetTitle
+              class={cn(
+                "text-4xl sm:text-5xl md:text-6xl leading-tight",
+                titleTextClass(),
+              )}
+            >
+              {openTask()?.header ?? ""}
             </SheetTitle>
           </SheetHeader>
 
           <div class="mt-5 space-y-5">
+            <div class={cn("text-xs flex items-center gap-3", metaTextClass())}>
+              <Show when={!!openTask()}>
+                <span>Created {openTask()?.createdAt.toLocaleDateString()}</span>
+              </Show>
+              <Show when={!!openTask()?.dueDate}>
+                <span>• Due {openTask()?.dueDate?.toLocaleDateString()}</span>
+              </Show>
+              <Show when={!!openTask()?.priority}>
+                <span>• Priority {openTask()?.priority}</span>
+              </Show>
+            </div>
             <div class="flex flex-wrap gap-2">
               <For
                 each={
@@ -210,16 +285,53 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
   );
 }
 
-// Alternative way to do this:
-// Where id == draft means that it is draft, This could also add resumability if tasks are being saved to the file system!
-// function handleAdd(newTask: Task) {
-//   setTasks((prev) => prev.map(t => (t.id === "__draft__" ? newTask : t)));
-// }
+function InlineListTitle({
+  value,
+  onSave,
+}: {
+  value: string;
+  onSave?: (val: string) => void;
+}) {
+  const [isEditing, setIsEditing] = createSignal(false);
+  const [text, setText] = createSignal(value);
 
-// function startAdd() {
-//   setTasks((prev) => [...prev, { id: "__draft__", title: "", /*...*/ }]);
-// }
+  function commit() {
+    const v = text().trim();
+    if (!v) {
+      setText(value);
+      setIsEditing(false);
+      return;
+    }
+    if (v !== value) onSave?.(v);
+    setIsEditing(false);
+  }
 
-// function cancelAdd() {
-//   setTasks((prev) => prev.filter(t => t.id !== "__draft__"));
-// }
+  return (
+    <div>
+      <Show when={isEditing()} fallback={
+        <h3
+          class="text-sm font-medium text-zinc-100 tracking-wide cursor-text"
+          onDblClick={() => setIsEditing(true)}
+          title="Double-click to rename"
+        >
+          {value}
+        </h3>
+      }>
+        <input
+          class="bg-transparent text-sm font-medium text-zinc-100 tracking-wide outline-none border-b border-white/10 focus:border-white/20"
+          value={text()}
+          onInput={(e) => setText(e.currentTarget.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") {
+              setText(value);
+              setIsEditing(false);
+            }
+          }}
+          autofocus
+        />
+      </Show>
+    </div>
+  );
+}
