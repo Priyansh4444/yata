@@ -64,6 +64,29 @@
     }
 }
 
+@layer utilities {
+  /* minimal, pure-black themed scrollbars */
+  .scrollbar-black {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(24,24,27,0.9) transparent;
+  }
+  .scrollbar-black::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .scrollbar-black::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-black::-webkit-scrollbar-thumb {
+    background-color: rgba(24,24,27,0.9); /* near-black */
+    border-radius: 9999px;
+    border: 2px solid rgba(9,9,11,0.6); /* blend with background */
+  }
+  .scrollbar-black::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(39,39,42,0.95);
+  }
+}
+
 @font-face {
     font-family: "PPEditorialNew-UltralightItalic";
     src: url("/fonts/PPEditorialNew-UltralightItalic.ttf") format("truetype");
