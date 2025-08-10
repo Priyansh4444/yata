@@ -8,6 +8,12 @@ export type Tag = {
 
 export type Task = {
   header: string;
+  id: string;
+  isDraft: boolean;
+  createdAt: Date;
+  dueDate?: Date;
+  completedAt?: Date;
+  priority?: "low" | "medium" | "high";
   description?: string;
   tags?: Tag[];
 };
