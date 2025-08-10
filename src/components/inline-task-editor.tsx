@@ -30,7 +30,9 @@ export default function InlineTaskEditor(props: Props) {
     setForm("tags", tags);
   }
 
-  function handleHeaderInput(e: InputEvent & { currentTarget: HTMLInputElement }) {
+  function handleHeaderInput(
+    e: InputEvent & { currentTarget: HTMLInputElement },
+  ) {
     setForm("header", e.currentTarget.value);
   }
 
@@ -68,7 +70,11 @@ export default function InlineTaskEditor(props: Props) {
         value={form.description || ""}
         onInput={handleDescriptionInput}
       />
-      <TagPicker value={form.tags} onChange={onTagsChange} suggestions={props.existingTags} />
+      <TagPicker
+        value={form.tags}
+        onChange={onTagsChange}
+        suggestions={props.existingTags}
+      />
       <div class="pt-1 flex items-center gap-2">
         <button
           type="button"
@@ -89,5 +95,3 @@ export default function InlineTaskEditor(props: Props) {
     </div>
   );
 }
-
-

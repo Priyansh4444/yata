@@ -15,7 +15,7 @@ export type Task = {
 export type TaskList = {
   header: string;
   tasks: Task[];
-}
+};
 
 export type MenuItem = {
   icon: JSX.Element;
@@ -23,4 +23,4 @@ export type MenuItem = {
   href: string;
   gradient: string;
   iconColor: string;
-}
+};

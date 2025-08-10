@@ -3,12 +3,21 @@ import { Task, TaskList } from "@/types";
 import TaskCard from "@components/task-card";
 import InlineTaskEditor from "@components/inline-task-editor";
 import type { Tag } from "@/types";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@components/ui/sheet";
 
 export default function KanbanList({ taskList }: { taskList: TaskList }) {
   const [tasks, setTasks] = createSignal<Task[]>(taskList.tasks);
   // Single source of truth for inline editor state
-  const [editor, setEditor] = createSignal<{ task: Task; index: number | null } | null>(null);
+  const [editor, setEditor] = createSignal<{
+    task: Task;
+    index: number | null;
+  } | null>(null);
   const [openTaskIndex, setOpenTaskIndex] = createSignal<number | null>(null);
 
   function handleSave(task: Task) {
@@ -41,7 +50,6 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
     const item = tasks()[index];
     setEditor({ task: item, index });
   }
-
 
   return (
     <section
@@ -149,7 +157,10 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
           + Add task
         </button>
       </div>
-      <Sheet open={openTaskIndex() !== null} onOpenChange={(v) => !v && setOpenTaskIndex(null)}>
+      <Sheet
+        open={openTaskIndex() !== null}
+        onOpenChange={(v) => !v && setOpenTaskIndex(null)}
+      >
         <SheetContent
           side="right"
           class="bg-black/50 backdrop-blur-xl border-white/10 p-5"
@@ -165,12 +176,21 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
 
           <div class="mt-5 space-y-5">
             <div class="flex flex-wrap gap-2">
-              <For each={openTaskIndex() !== null ? (tasks()[openTaskIndex()!].tags ?? []) : []}>
+              <For
+                each={
+                  openTaskIndex() !== null
+                    ? (tasks()[openTaskIndex()!].tags ?? [])
+                    : []
+                }
+              >
                 {(tag) => (
-                  <span class="px-2.5 py-1 text-[11px] rounded-md text-zinc-200 border border-white/10" style={{
-                    "background-color": `${tag.color}33`,
-                    color: tag.color,
-                  }}>
+                  <span
+                    class="px-2.5 py-1 text-[11px] rounded-md text-zinc-200 border border-white/10"
+                    style={{
+                      "background-color": `${tag.color}33`,
+                      color: tag.color,
+                    }}
+                  >
                     {tag.label}
                   </span>
                 )}
@@ -179,7 +199,9 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
             {/* Divider line below tags */}
             <div class="border-t border-white/10" />
             <p class="text-base sm:text-lg text-zinc-300 leading-relaxed whitespace-pre-wrap">
-              {openTaskIndex() !== null ? (tasks()[openTaskIndex()!].description || "") : ""}
+              {openTaskIndex() !== null
+                ? tasks()[openTaskIndex()!].description || ""
+                : ""}
             </p>
           </div>
         </SheetContent>
@@ -188,8 +210,7 @@ export default function KanbanList({ taskList }: { taskList: TaskList }) {
   );
 }
 
-
-// Alternative way to do this: 
+// Alternative way to do this:
 // Where id == draft means that it is draft, This could also add resumability if tasks are being saved to the file system!
 // function handleAdd(newTask: Task) {
 //   setTasks((prev) => prev.map(t => (t.id === "__draft__" ? newTask : t)));

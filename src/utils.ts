@@ -2,16 +2,20 @@ import type { Task, TaskList, Tag, HexColor } from "@/types";
 
 const DEFAULT_TAG_COLOR = "#3b82f6" as HexColor;
 
-function createTask(name: string, tags?: (string | Tag)[], description?: string): Task {
+function createTask(
+  name: string,
+  tags?: (string | Tag)[],
+  description?: string,
+): Task {
   return {
     header: name,
     description,
-    tags: (tags ?? []).map(t =>
+    tags: (tags ?? []).map((t) =>
       typeof t === "string"
         ? { label: t, color: DEFAULT_TAG_COLOR }
-        : { ...t, color: t.color ?? DEFAULT_TAG_COLOR }
+        : { ...t, color: t.color ?? DEFAULT_TAG_COLOR },
     ),
-  }
+  };
 }
 
 function createTaskList(name: string, tasks: Task[]): TaskList {
@@ -35,10 +39,17 @@ function generateRandomTasks(count: number): Task[] {
   const tasks: Task[] = [];
   for (let i = 0; i < count; i++) {
     const taskName = `Task ${i + 1}`;
-    const tags = Math.random() > 0.5
-      ? [{ label: `Tag${Math.floor(Math.random() * 5)}`, color: randomColor() }]
-      : [];
-    const description = Math.random() > 0.4 ? "Task description goes here..." : undefined;
+    const tags =
+      Math.random() > 0.5
+        ? [
+            {
+              label: `Tag${Math.floor(Math.random() * 5)}`,
+              color: randomColor(),
+            },
+          ]
+        : [];
+    const description =
+      Math.random() > 0.4 ? "Task description goes here..." : undefined;
     tasks.push(createTask(taskName, tags, description));
   }
   return tasks;

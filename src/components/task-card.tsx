@@ -1,7 +1,15 @@
 import { Task } from "../types";
 import TagBadge from "@components/tags/tag-badge";
 
-export default function TaskCard({ task, onOpen, onAddTags }: { task: Task; onOpen?: () => void; onAddTags?: () => void }) {
+export default function TaskCard({
+  task,
+  onOpen,
+  onAddTags,
+}: {
+  task: Task;
+  onOpen?: () => void;
+  onAddTags?: () => void;
+}) {
   const { header } = task;
   const hasTags = (task.tags?.length ?? 0) > 0;
 

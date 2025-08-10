@@ -1,7 +1,6 @@
 import { TaskList } from "@/types";
 import KanbanList from "@components/task-list";
 import { For } from "solid-js";
-import { Sheet } from "@components/ui/sheet";
 
 export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
   return (
