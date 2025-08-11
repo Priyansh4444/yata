@@ -9,7 +9,8 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
   const [newListName, setNewListName] = createSignal("");
 
   function addList(name?: string) {
-    const header = (name ?? newListName()).trim() || "New list";
+    const header = (name ?? newListName()).trim();
+    if (header.length === 0) return; // no-op on empty input
     const newList = createTaskList(header, []);
     setLists((prev) => [...prev, newList]);
     setNewListName("");
@@ -17,7 +18,9 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
   }
 
   function renameListAt(index: number, newHeader: string) {
-    setLists((prev) => prev.map((l, i) => (i === index ? { ...l, header: newHeader } : l)));
+    setLists((prev) =>
+      prev.map((l, i) => (i === index ? { ...l, header: newHeader } : l))
+    );
   }
 
   function startAdd() {
@@ -61,11 +64,13 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
             <div class="sticky top-0 z-10 flex items-center justify-between px-2 py-2 rounded-xl bg-black/20 border-b border-white/5">
               <input
                 class="flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-600 outline-none"
-                placeholder="List name"
-                value={newListName()}
-                onInput={(e) => setNewListName(e.currentTarget.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") addList();
+                  if (e.isComposing) return; // respect IME composition
+                  if (e.key === "Enter") {
+                    const name = newListName().trim();
+                    if (name.length === 0) return;
+                    addList(name);
+                  }
                   if (e.key === "Escape") cancelAdd();
                 }}
                 autofocus

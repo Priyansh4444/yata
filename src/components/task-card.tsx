@@ -28,8 +28,8 @@ function Dots({
     });
   });
 
-  if (!priorityProps.rgb || priorityProps.baseCount === 0) return null;
-
+  const dotsArray = dots();
+  if (!dotsArray) return null;
   return (
     <div class="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
       {dots()!.map((d) => (
@@ -62,6 +62,7 @@ export default function TaskCard({
   const { header } = task;
   const hasTags: boolean = (task.tags?.length ?? 0) > 0;
   const isDraft: boolean = task.isDraft;
+  // Potential error if invalid date, but this is an issue I think that should be faced in Input Validation
   const due: Option<Date> = task.dueDate ? new Date(task.dueDate) : undefined;
 
   const priority = task.priority;
@@ -77,7 +78,7 @@ export default function TaskCard({
       class={cn(
         "task-card group relative rounded-xl p-6 min-h-[110px] bg-black/50 backdrop-blur-sm border",
         "shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_8px_24px_-12px_rgba(0,0,0,0.8)] transition-colors duration-150 cursor-pointer",
-        priorityProps.borderClass,
+        priorityProps.borderClass
       )}
       onClick={onOpen}
     >
@@ -87,7 +88,7 @@ export default function TaskCard({
           <h2
             class={cn(
               "text-base sm:text-lg font-semibold leading-snug line-clamp-2",
-              priorityProps.headerTextClass,
+              priorityProps.headerTextClass
             )}
           >
             {header}
@@ -95,7 +96,7 @@ export default function TaskCard({
           <div
             class={cn(
               "mt-1 flex items-center gap-2 text-[11px]",
-              priorityProps.metaTextClass,
+              priorityProps.metaTextClass
             )}
           >
             {due && <span>Due {due.toLocaleDateString()}</span>}

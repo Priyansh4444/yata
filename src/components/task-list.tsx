@@ -24,9 +24,11 @@ export default function KanbanList({
 
   const hasDraft = createMemo(() => tasks().some((t) => t.isDraft));
 
-  const openTask = createMemo(() =>
-    openTaskIndex() !== null ? tasks()[openTaskIndex()!] : null,
-  );
+  const openTask = createMemo(() => {
+    const index = openTaskIndex();
+    return index !== null && index < tasks().length ? tasks()[index] : null;
+  });
+
   const priorityUi = createMemo(() => getPriorityUiProps(openTask()?.priority));
 
   const existingTags = createMemo<Tag[]>(() => {
@@ -42,7 +44,7 @@ export default function KanbanList({
 
   function startEditAt(index: number) {
     setTasks((prev) =>
-      prev.map((t, i) => (i === index ? { ...t, isDraft: true } : t)),
+      prev.map((t, i) => (i === index ? { ...t, isDraft: true } : t))
     );
   }
 
@@ -74,21 +76,21 @@ export default function KanbanList({
               dueDate: updates.dueDate ?? task.dueDate,
               isDraft: false,
             }
-          : task,
-      ),
+          : task
+      )
     );
   }
 
   function handleCancel(index: number) {
-    const t = tasks()[index];
-    if (!t) return;
-    if ((t.header ?? "").trim() === "") {
+    const task = tasks()[index];
+    if (!task) return;
+    if ((task.header ?? "").trim() === "") {
       setTasks((prev) => prev.filter((_, i) => i !== index));
     } else {
       setTasks((prev) =>
         prev.map((task, i) =>
-          i === index ? { ...task, isDraft: false } : task,
-        ),
+          i === index ? { ...task, isDraft: false } : task
+        )
       );
     }
   }
@@ -197,7 +199,7 @@ export default function KanbanList({
           side="right"
           class={cn(
             "bg-black/50 backdrop-blur-xl p-5 border",
-            priorityUi().sheetBorderClass,
+            priorityUi().sheetBorderClass
           )}
         >
           <SheetHeader>
@@ -207,7 +209,7 @@ export default function KanbanList({
             <SheetTitle
               class={cn(
                 "text-4xl sm:text-5xl md:text-6xl leading-tight",
-                priorityUi().titleTextClass,
+                priorityUi().titleTextClass
               )}
             >
               {openTask()?.header ?? ""}
@@ -218,7 +220,7 @@ export default function KanbanList({
             <div
               class={cn(
                 "text-xs flex items-center gap-3",
-                priorityUi().metaTextClass,
+                priorityUi().metaTextClass
               )}
             >
               <Show when={!!openTask()}>
@@ -299,7 +301,10 @@ function InlineListTitle({
           class="bg-transparent text-sm font-medium text-zinc-100 tracking-wide outline-none border-b border-white/10 focus:border-white/20"
           value={text()}
           onInput={(e) => setText(e.currentTarget.value)}
-          onBlur={commit}
+          onBlur={() => {
+            if (!isEditing()) return;
+            commit();
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") commit();
             if (e.key === "Escape") {

@@ -1,6 +1,18 @@
+// Returns yyyy-MM-dd from a Date or string, using local time (not UTC)
+function toLocalDateInputString(
+  date: Date | string | undefined
+): string | undefined {
+  if (!date) return undefined;
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return undefined;
+  const y = d.getFullYear();
+  const m = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 import { createMemo } from "solid-js";
 import { createStore } from "solid-js/store";
-import type { Task, Tag } from "@/types";
+import type { Option, Task, Tag, Priority } from "@/types";
 import TagPicker from "@components/tags/tag-picker";
 
 type Props = {
@@ -16,9 +28,9 @@ export default function InlineTaskEditor(props: Props) {
     header: string;
     description: string | undefined;
     tags: Tag[];
-    priority: Task["priority"];
+    priority?: Option<Priority>;
     // Keep dueDate as an ISO date string for the input; convert before save
-    dueDate: string | undefined;
+    dueDate?: string;
   };
 
   const [form, setForm] = createStore<FormState>({
@@ -26,7 +38,7 @@ export default function InlineTaskEditor(props: Props) {
     description: initial?.description,
     tags: (initial?.tags ?? []) as Tag[],
     priority: initial?.priority,
-    dueDate: initial?.dueDate ? new Date(initial.dueDate).toISOString().slice(0, 10) : undefined,
+    dueDate: toLocalDateInputString(initial?.dueDate),
   });
 
   const canSave = createMemo(() => form.header.trim().length > 0);
@@ -36,28 +48,38 @@ export default function InlineTaskEditor(props: Props) {
   }
 
   function handleHeaderInput(
-    e: InputEvent & { currentTarget: HTMLInputElement },
+    e: InputEvent & { currentTarget: HTMLInputElement }
   ) {
     setForm("header", e.currentTarget.value);
   }
 
   function handleDescriptionInput(
-    e: InputEvent & { currentTarget: HTMLTextAreaElement },
+    e: InputEvent & { currentTarget: HTMLTextAreaElement }
   ) {
     setForm("description", e.currentTarget.value);
   }
 
   // no-op placeholder removed; TagPicker manages its own inputs
 
+  function parseLocalDateInput(input: string | undefined): Date | undefined {
+    if (!input) return undefined;
+    const [y, m, d] = input.split("-").map(Number);
+    if (!y || !m || !d) return undefined;
+    const date = new Date(y, m - 1, d);
+    return isNaN(date.getTime()) ? undefined : date;
+  }
+
   function onSubmit() {
     if (!canSave()) return onCancel();
-    const updates: Partial<Task> = {
-      header: form.header.trim(),
-      description: form.description?.trim() || undefined,
-      tags: form.tags,
-      priority: form.priority,
-      dueDate: form.dueDate ? new Date(form.dueDate) : undefined,
-    };
+    const updates: Partial<Task> = {};
+    const header = form.header.trim();
+    if (header) updates.header = header;
+    if (form.description && form.description.trim())
+      updates.description = form.description.trim();
+    if (form.tags && form.tags.length > 0) updates.tags = form.tags;
+    if (form.priority !== undefined) updates.priority = form.priority;
+    const dueDate = parseLocalDateInput(form.dueDate);
+    if (dueDate) updates.dueDate = dueDate;
     onSave(updates);
   }
 
@@ -82,18 +104,32 @@ export default function InlineTaskEditor(props: Props) {
           class="bg-transparent text-xs text-zinc-300 border border-white/10 rounded-md px-2 py-1"
           value={form.priority ?? ""}
           onChange={(e) =>
-            setForm("priority", (e.currentTarget.value || undefined) as Task["priority"]) }
+            setForm(
+              "priority",
+              (e.currentTarget.value || undefined) as Task["priority"]
+            )
+          }
         >
-          <option value="" class="bg-black">Priority</option>
-          <option value="low" class="bg-black">Low</option>
-          <option value="medium" class="bg-black">Medium</option>
-          <option value="high" class="bg-black">High</option>
+          <option value="" class="bg-black">
+            Priority
+          </option>
+          <option value="low" class="bg-black">
+            Low
+          </option>
+          <option value="medium" class="bg-black">
+            Medium
+          </option>
+          <option value="high" class="bg-black">
+            High
+          </option>
         </select>
         <input
           type="date"
           class="bg-transparent text-xs text-zinc-300 border border-white/10 rounded-md px-2 py-1"
           value={form.dueDate ?? ""}
-          onInput={(e) => setForm("dueDate", e.currentTarget.value || undefined)}
+          onInput={(e) =>
+            setForm("dueDate", e.currentTarget.value || undefined)
+          }
         />
       </div>
       <TagPicker
