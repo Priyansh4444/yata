@@ -1,5 +1,8 @@
 // Hex color string like #RGB or #RRGGBB. Using a broad template keeps TS fast and friendly.
 export type HexColor = `#${string}`;
+type Option<T> = T | undefined;
+
+export type Priority = "low" | "medium" | "high";
 
 export type Tag = {
   label: string;
@@ -11,11 +14,11 @@ export type Task = {
   id: string;
   isDraft: boolean;
   createdAt: Date;
-  dueDate?: Date;
-  completedAt?: Date;
-  priority?: "low" | "medium" | "high";
-  description?: string;
-  tags?: Tag[];
+  dueDate?: Option<Date>;
+  completedAt?: Option<Date>;
+  priority?: Option<Priority>;
+  description?: Option<string>;
+  tags?: Option<Tag[]>;
 };
 
 export type TaskList = {
