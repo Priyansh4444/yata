@@ -15,7 +15,7 @@ export const Sheet = DialogPrimitive;
 export const SheetTrigger = DialogPrimitive.Trigger;
 
 export const sheetVariants = cva(
-  "fixed z-50 gap-4 bg-black/60 backdrop-blur-xl border border-white/10 p-6 shadow-lg transition ease-in-out data-[expanded]:animate-in data-[closed]:animate-out data-[expanded]:duration-200 data-[closed]:duration-200",
+  "fixed z-50 gap-4 bg-black/60 backdrop-blur-xl border border-white/10 p-6 shadow-lg transition ease-in-out data-[expanded]:animate-in data-[closed]:animate-out data-[expanded]:duration-500 data-[closed]:duration-500",
   {
     variants: {
       side: {
@@ -35,9 +35,9 @@ export const sheetVariants = cva(
 
 type sheetContentProps<T extends ValidComponent = "div"> = ParentProps<
   DialogContentProps<T> &
-    VariantProps<typeof sheetVariants> & {
-      class?: string;
-    }
+  VariantProps<typeof sheetVariants> & {
+    class?: string;
+  }
 >;
 
 export const SheetContent = <T extends ValidComponent = "div">(

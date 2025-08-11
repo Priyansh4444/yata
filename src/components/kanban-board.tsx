@@ -2,6 +2,7 @@ import { TaskList } from "@/types";
 import KanbanList from "@components/task-list";
 import { For, Show, createSignal } from "solid-js";
 import { createTaskList } from "@/utils";
+import NewListCard from "@components/new-list-card";
 
 export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
   const [lists, setLists] = createSignal<TaskList[]>(taskLists);
@@ -23,6 +24,10 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
     );
   }
 
+  function deleteListAt(index: number) {
+    setLists((prev) => prev.filter((_, i) => i !== index));
+  }
+
   function startAdd() {
     setIsAdding(true);
     setNewListName("");
@@ -40,6 +45,7 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
           <KanbanList
             taskList={list}
             onRenameList={(name) => renameListAt(i(), name)}
+            onDeleteList={() => deleteListAt(i())}
           />
         )}
       </For>
@@ -48,52 +54,31 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
         <Show
           when={isAdding()}
           fallback={
-            <div class="flex-1 rounded-2xl border border-dashed border-white/10 bg-black/30 backdrop-blur-sm p-3">
-              <button
-                type="button"
-                class="h-8 px-2 text-xs rounded-md bg-white/5 hover:bg-white/10 text-zinc-200 border border-white/10"
-                onClick={startAdd}
-                title="Add a new list"
-              >
-                + New list
-              </button>
-            </div>
+            <button
+              type="button"
+              class="rounded-2xl border border-dashed border-white/10 bg-black/30 backdrop-blur-sm p-4 group relative overflow-hidden min-h-[140px] grid place-items-center"
+              onClick={startAdd}
+              title="Add a new list"
+            >
+              <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                <div class="absolute -top-16 -left-16 h-36 w-36 rounded-full bg-emerald-400/10 blur-2xl" />
+                <div class="absolute -bottom-20 -right-20 h-40 w-40 rounded-full bg-blue-500/10 blur-2xl" />
+              </div>
+              <div class="relative z-10 flex flex-col items-center gap-2">
+                <span class="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] group-hover:bg-white/[0.08] transition-colors ring-1 ring-inset ring-white/5 text-zinc-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </span>
+                <span class="text-xs text-zinc-300">New list</span>
+              </div>
+            </button>
           }
         >
-          <div class="flex-1 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-3 flex flex-col">
-            <div class="sticky top-0 z-10 flex items-center justify-between px-2 py-2 rounded-xl bg-black/20 border-b border-white/5">
-              <input
-                class="flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-600 outline-none"
-                onKeyDown={(e) => {
-                  if (e.isComposing) return; // respect IME composition
-                  if (e.key === "Enter") {
-                    const name = newListName().trim();
-                    if (name.length === 0) return;
-                    addList(name);
-                  }
-                  if (e.key === "Escape") cancelAdd();
-                }}
-                autofocus
-              />
-            </div>
-            <div class="mt-auto flex items-center justify-end gap-2 pt-3 px-2">
-              <button
-                type="button"
-                class="px-3 py-1.5 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10"
-                onClick={cancelAdd}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                class="px-3 py-1.5 rounded-lg text-xs bg-white/10 hover:bg-white/15 text-white border border-white/10 disabled:opacity-50"
-                disabled={newListName().trim().length === 0}
-                onClick={() => addList()}
-              >
-                Add list
-              </button>
-            </div>
-          </div>
+          <NewListCard
+            onAdd={(n) => addList(n)}
+            onCancel={cancelAdd}
+          />
         </Show>
       </section>
     </div>
