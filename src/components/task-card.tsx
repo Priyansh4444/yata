@@ -1,7 +1,54 @@
-import { Task } from "../types";
+import { Task, Option } from "@/types";
 import { cn } from "@/libs/cn";
-import { createMemo } from "solid-js";
+import { createMemo, JSX } from "solid-js";
 import TagBadge from "@components/tags/tag-badge";
+
+function Dots({
+  priorityProps,
+}: {
+  priorityProps: PriorityProps;
+}): JSX.Element | null {
+  const dots = createMemo(() => {
+    const { rgb, baseCount, opacity, sizeRange, blurRange } = priorityProps;
+    if (!rgb || baseCount === 0) return null;
+    const [r, g, b] = rgb;
+    return Array.from({ length: baseCount }, () => {
+      const left = 5 + Math.random() * 90; // percent
+      const top = 5 + Math.random() * 70; // percent
+      const size = 40 + Math.random() * sizeRange; // px
+      const blur = 12 + Math.random() * blurRange; // px
+      return {
+        left: `${left}%`,
+        top: `${top}%`,
+        size,
+        blur,
+        opacity,
+        color: `rgba(${r}, ${g}, ${b}, ${opacity})`,
+      };
+    });
+  });
+
+  if (!priorityProps.rgb || priorityProps.baseCount === 0) return null;
+
+  return (
+    <div class="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+      {dots()!.map((d) => (
+        <div
+          style={{
+            position: "absolute",
+            left: d.left,
+            top: d.top,
+            width: `${d.size}px`,
+            height: `${d.size}px`,
+            background: d.color,
+            "border-radius": "9999px",
+            filter: `blur(${d.blur}px)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function TaskCard({
   task,
@@ -13,93 +60,15 @@ export default function TaskCard({
   onAddTags?: () => void;
 }) {
   const { header } = task;
-  const hasTags = (task.tags?.length ?? 0) > 0;
-  const isDraft = task.isDraft;
-  const due = task.dueDate ? new Date(task.dueDate) : undefined;
+  const hasTags: boolean = (task.tags?.length ?? 0) > 0;
+  const isDraft: boolean = task.isDraft;
+  const due: Option<Date> = task.dueDate ? new Date(task.dueDate) : undefined;
 
   const priority = task.priority;
-  const borderClass =
-    priority === "low"
-      ? "border-emerald-500/20 hover:border-emerald-400/30"
-      : priority === "medium"
-        ? "border-amber-500/25 hover:border-amber-400/35"
-        : priority === "high"
-          ? "border-rose-600/30 hover:border-rose-500/40"
-          : "border-white/5 hover:border-white/10";
-  const headerTextClass =
-    priority === "low"
-      ? "text-emerald-100"
-      : priority === "medium"
-        ? "text-amber-100"
-        : priority === "high"
-          ? "text-rose-100"
-          : "text-zinc-100";
-  const metaTextClass =
-    priority === "low"
-      ? "text-emerald-300/80"
-      : priority === "medium"
-        ? "text-amber-300/80"
-        : priority === "high"
-          ? "text-rose-300/80"
-          : "text-zinc-400";
-  function getPriorityRGB(): [number, number, number] | null {
-    if (priority === "low") return [16, 185, 129]; // emerald-500
-    if (priority === "medium") return [245, 158, 11]; // amber-500
-    if (priority === "high") return [244, 63, 94]; // rose-500
-    return null;
-  }
-
-  function hashString(value: string): number {
-    let hash = 2166136261;
-    for (let i = 0; i < value.length; i++) {
-      hash ^= value.charCodeAt(i);
-      hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-    }
-    return hash >>> 0;
-  }
-
-  function rng(seed: number): () => number {
-    let t = seed + 0x6d2b79f5;
-    return () => {
-      t += 0x6d2b79f5;
-      let x = t;
-      x = Math.imul(x ^ (x >>> 15), x | 1);
-      x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
-      return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-
-  const dots = createMemo(() => {
-    const color = getPriorityRGB();
-    if (!color) return [] as { left: string; top: string; size: number; blur: number; opacity: number; color: string }[];
-    const baseCount = priority === "low" ? 4 : priority === "medium" ? 6 : 8;
-    const seed = hashString(task.id + task.header + (task.createdAt?.toString() ?? ""));
-    const rand = rng(seed);
-    const [r, g, b] = color;
-    const arr: { left: string; top: string; size: number; blur: number; opacity: number; color: string }[] = [];
-    for (let i = 0; i < baseCount; i++) {
-      const left = 5 + rand() * 90; // percent
-      const top = 5 + rand() * 70; // percent
-      const size = 40 + rand() * (priority === "high" ? 110 : priority === "medium" ? 90 : 70); // px
-      const blur = 12 + rand() * (priority === "high" ? 28 : priority === "medium" ? 22 : 18); // px
-      const opacity = priority === "high" ? 0.22 : priority === "medium" ? 0.16 : 0.12;
-      arr.push({
-        left: `${left}%`,
-        top: `${top}%`,
-        size,
-        blur,
-        opacity,
-        color: `rgba(${r}, ${g}, ${b}, ${opacity})`,
-      });
-    }
-    return arr;
-  });
+  const priorityProps = getPriorityProps(priority);
 
   function handleAddTagsClick(event: MouseEvent) {
-    // Prevent the card's onClick (which opens the sheet) from firing
     event.stopPropagation();
-    // Also prevent default to avoid any odd focus behavior
-    event.preventDefault();
     if (onAddTags) onAddTags();
   }
 
@@ -108,34 +77,27 @@ export default function TaskCard({
       class={cn(
         "task-card group relative rounded-xl p-6 min-h-[110px] bg-black/50 backdrop-blur-sm border",
         "shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_8px_24px_-12px_rgba(0,0,0,0.8)] transition-colors duration-150 cursor-pointer",
-        borderClass,
+        priorityProps.borderClass,
       )}
       onClick={onOpen}
     >
-      {priority && (
-        <div class="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-          {dots().map((d) => (
-            <div
-              style={{
-                position: "absolute",
-                left: d.left,
-                top: d.top,
-                width: `${d.size}px`,
-                height: `${d.size}px`,
-                background: d.color,
-                "border-radius": "9999px",
-                filter: `blur(${d.blur}px)`,
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {priority && <Dots priorityProps={priorityProps} />}
       <header class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <h2 class={cn("text-base sm:text-lg font-semibold leading-snug line-clamp-2", headerTextClass)}>
+          <h2
+            class={cn(
+              "text-base sm:text-lg font-semibold leading-snug line-clamp-2",
+              priorityProps.headerTextClass,
+            )}
+          >
             {header}
           </h2>
-          <div class={cn("mt-1 flex items-center gap-2 text-[11px]", metaTextClass)}>
+          <div
+            class={cn(
+              "mt-1 flex items-center gap-2 text-[11px]",
+              priorityProps.metaTextClass,
+            )}
+          >
             {due && <span>Due {due.toLocaleDateString()}</span>}
             {isDraft && <span class="text-amber-300">Draft</span>}
           </div>
@@ -150,8 +112,6 @@ export default function TaskCard({
             type="button"
             class="px-2 py-0.5 text-[11px] rounded-md border border-dashed border-white/10 text-zinc-500/70 opacity-80 group-hover:opacity-100 transition-opacity bg-transparent"
             onClick={handleAddTagsClick}
-            onPointerDown={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
             aria-label="Add tags inline"
             title="Add tags"
           >
@@ -168,4 +128,64 @@ export default function TaskCard({
       />
     </article>
   );
+}
+
+type PriorityProps = {
+  borderClass: string;
+  headerTextClass: string;
+  metaTextClass: string;
+  rgb: [number, number, number] | null;
+  baseCount: number;
+  opacity: number;
+  sizeRange: number;
+  blurRange: number;
+};
+
+function getPriorityProps(priority: Task["priority"]): PriorityProps {
+  switch (priority) {
+    case "low":
+      return {
+        borderClass: "border-emerald-500/20 hover:border-emerald-400/30",
+        headerTextClass: "text-emerald-100",
+        metaTextClass: "text-emerald-300/80",
+        rgb: [16, 185, 129],
+        baseCount: 4,
+        opacity: 0.12,
+        sizeRange: 70,
+        blurRange: 18,
+      };
+    case "medium":
+      return {
+        borderClass: "border-amber-500/25 hover:border-amber-400/35",
+        headerTextClass: "text-amber-100",
+        metaTextClass: "text-amber-300/80",
+        rgb: [245, 158, 11],
+        baseCount: 6,
+        opacity: 0.16,
+        sizeRange: 90,
+        blurRange: 22,
+      };
+    case "high":
+      return {
+        borderClass: "border-rose-600/30 hover:border-rose-500/40",
+        headerTextClass: "text-rose-100",
+        metaTextClass: "text-rose-300/80",
+        rgb: [244, 63, 94],
+        baseCount: 8,
+        opacity: 0.22,
+        sizeRange: 110,
+        blurRange: 28,
+      };
+    default:
+      return {
+        borderClass: "border-white/5 hover:border-white/10",
+        headerTextClass: "text-zinc-100",
+        metaTextClass: "text-zinc-400",
+        rgb: null,
+        baseCount: 0,
+        opacity: 0,
+        sizeRange: 0,
+        blurRange: 0,
+      };
+  }
 }
