@@ -1,4 +1,4 @@
-import { Task, Option } from "@/types";
+import { Task, Option, Priority } from "@/types";
 import { cn } from "@/libs/cn";
 import { createMemo, JSX } from "solid-js";
 import TagBadge from "@components/tags/tag-badge";
@@ -141,7 +141,7 @@ type PriorityProps = {
   blurRange: number;
 };
 
-function getPriorityProps(priority: Task["priority"]): PriorityProps {
+function getPriorityProps(priority: Option<Priority>): PriorityProps {
   switch (priority) {
     case "low":
       return {
