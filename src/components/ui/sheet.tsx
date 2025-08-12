@@ -15,16 +15,14 @@ export const Sheet = DialogPrimitive;
 export const SheetTrigger = DialogPrimitive.Trigger;
 
 export const sheetVariants = cva(
-  "fixed z-50 gap-4 bg-black/60 backdrop-blur-xl border border-white/10 p-6 shadow-lg transition ease-in-out data-[expanded]:animate-in data-[closed]:animate-out data-[expanded]:duration-500 data-[closed]:duration-500",
+  "fixed z-50 gap-4 bg-black/60 p-6 shadow-lg transform-gpu will-change-[opacity,transform] border border-white/10",
   {
     variants: {
       side: {
-        top: "inset-x-0 top-0 border-b data-[closed]:slide-out-to-top data-[expanded]:slide-in-from-top",
-        bottom:
-          "inset-x-0 bottom-0 border-t data-[closed]:slide-out-to-bottom data-[expanded]:slide-in-from-bottom",
-        left: "inset-y-0 left-0 h-full w-[92vw] sm:w-[75vw] border-r data-[closed]:slide-out-to-left data-[expanded]:slide-in-from-left",
-        right:
-          "inset-y-0 right-0 h-full w-[92vw] sm:w-[75vw] border-l data-[closed]:slide-out-to-right data-[expanded]:slide-in-from-right",
+        top: "inset-x-0 top-0 border-b",
+        bottom: "inset-x-0 bottom-0 border-t",
+        left: "inset-y-0 left-0 h-full w-[92vw] sm:w-[75vw] border-r",
+        right: "inset-y-0 right-0 h-full w-[92vw] sm:w-[75vw] border-l",
       },
     },
     defaultVariants: {
@@ -53,12 +51,11 @@ export const SheetContent = <T extends ValidComponent = "div">(
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay
-        class={cn(
-          "fixed inset-0 z-50 bg-black/50 backdrop-blur-xl data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0",
-        )}
+        class={cn("fixed inset-0 z-50 bg-black/60 sheet-overlay")}
       />
       <DialogPrimitive.Content
-        class={sheetVariants({ side: local.side, class: local.class })}
+        class={cn(sheetVariants({ side: local.side, class: local.class }), "sheet-content")}
+        data-side={local.side}
         {...rest}
       >
         {local.children}

@@ -20,7 +20,7 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
 
   function renameListAt(index: number, newHeader: string) {
     setLists((prev) =>
-      prev.map((l, i) => (i === index ? { ...l, header: newHeader } : l))
+      prev.map((list, i) => (i === index ? { ...list, header: newHeader } : list)),
     );
   }
 
@@ -66,7 +66,16 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
               </div>
               <div class="relative z-10 flex flex-col items-center gap-2">
                 <span class="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] group-hover:bg-white/[0.08] transition-colors ring-1 ring-inset ring-white/5 text-zinc-300">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    class="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 </span>
@@ -75,10 +84,7 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
             </button>
           }
         >
-          <NewListCard
-            onAdd={(n) => addList(n)}
-            onCancel={cancelAdd}
-          />
+          <NewListCard onAdd={(n) => addList(n)} onCancel={cancelAdd} />
         </Show>
       </section>
     </div>

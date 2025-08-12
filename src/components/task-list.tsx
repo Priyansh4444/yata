@@ -1,40 +1,36 @@
 import { For, Show, createMemo, createSignal } from "solid-js";
-import { Task, TaskList, Tag, Priority, Option } from "@/types";
+import { createStore } from "solid-js/store";
+import { Task, TaskList, Tag } from "@/types";
 import TaskCard from "@components/task-card";
 import InlineTaskEditor from "@components/inline-task-editor";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@components/ui/sheet";
-import { generateUID } from "@/utils";
-import { cn } from "@/libs/cn";
+import { createTask } from "@/utils";
+import InlineListTitle from "@components/inline-list-title";
+import TaskDetailsSheet from "@components/task-details-sheet";
 
 export default function KanbanList({
   taskList,
   onRenameList,
+  onDeleteList,
 }: {
   taskList: TaskList;
-  onRenameList?: (name: string) => void;
+  onRenameList: (name: string) => void;
+  onDeleteList: () => void;
 }) {
-  const [tasks, setTasks] = createSignal<Task[]>(taskList.tasks);
+  const [tasks, setTasks] = createStore<Task[]>(taskList.tasks);
   const [openTaskIndex, setOpenTaskIndex] = createSignal<number | null>(null);
+  const [sheetOpen, setSheetOpen] = createSignal<boolean>(false);
 
-  const hasDraft = createMemo(() => tasks().some((t) => t.isDraft));
+  const hasDraft = createMemo(() => tasks.some((t) => t.isDraft));
 
   const openTask = createMemo(() => {
     const index = openTaskIndex();
-    return index !== null && index < tasks().length ? tasks()[index] : null;
+    return index !== null && index < tasks.length ? tasks[index] : null;
   });
-
-  const priorityUi = createMemo(() => getPriorityUiProps(openTask()?.priority));
 
   const existingTags = createMemo<Tag[]>(() => {
     const map = new Map<string, Tag>();
-    for (const t of tasks()) {
-      for (const tag of t.tags ?? []) {
+    for (const task of tasks) {
+      for (const tag of task.tags ?? []) {
         const key = tag.label.toLowerCase();
         if (!map.has(key)) map.set(key, tag);
       }
@@ -43,56 +39,37 @@ export default function KanbanList({
   });
 
   function startEditAt(index: number) {
-    setTasks((prev) =>
-      prev.map((t, i) => (i === index ? { ...t, isDraft: true } : t))
-    );
+    setTasks(index, "isDraft", true);
   }
 
   function startAddNew() {
-    const newTask: Task = {
-      id: generateUID(),
-      header: "",
-      isDraft: true,
-      createdAt: new Date(),
-      description: undefined,
-      tags: [],
-      priority: undefined,
-      dueDate: undefined,
-      completedAt: undefined,
-    };
-    setTasks((prev) => [newTask, ...prev]);
+    const newTask: Task = createTask("", [], undefined, { isDraft: true });
+    setTasks([newTask, ...tasks]);
   }
 
   function handleSave(index: number, updates: Partial<Task>) {
-    setTasks((prev) =>
-      prev.map((task, i) =>
-        i === index
-          ? {
-              ...task,
-              header: updates.header?.trim() ?? task.header,
-              description: updates.description ?? task.description,
-              tags: updates.tags ?? task.tags,
-              priority: updates.priority ?? task.priority,
-              dueDate: updates.dueDate ?? task.dueDate,
-              isDraft: false,
-            }
-          : task
-      )
-    );
+    const patch: Partial<Task> = { ...updates };
+    if (patch.header !== undefined) patch.header = patch.header.trim();
+    patch.isDraft = false;
+    setTasks(index, patch);
   }
 
   function handleCancel(index: number) {
-    const task = tasks()[index];
+    const task = tasks[index];
     if (!task) return;
     if ((task.header ?? "").trim() === "") {
-      setTasks((prev) => prev.filter((_, i) => i !== index));
+      setTasks(tasks.filter((_, i) => i !== index));
     } else {
-      setTasks((prev) =>
-        prev.map((task, i) =>
-          i === index ? { ...task, isDraft: false } : task
-        )
-      );
+      setTasks(index, "isDraft", false);
     }
+  }
+
+  function updateOpenTask(updates: Partial<Task>) {
+    const index = openTaskIndex();
+    if (index === null) return;
+    Object.entries(updates).forEach(([key, value]) => {
+      setTasks(index, key as keyof Task, value);
+    });
   }
 
   return (
@@ -121,14 +98,39 @@ export default function KanbanList({
             onSave={(v) => onRenameList?.(v)}
           />
         </div>
-        <span
-          class="
-            text-[11px] px-2 py-0.5 rounded-md
-            bg-white/5 text-zinc-400 border border-white/10
-          "
-        >
-          {tasks().length}
-        </span>
+        <div class="flex items-center gap-2">
+          <span
+            class="
+              text-[11px] px-2 py-0.5 rounded-md
+              bg-white/5 text-zinc-400 border border-white/10
+            "
+          >
+            {tasks.length}
+          </span>
+          <button
+            type="button"
+            class="h-7 w-7 grid place-items-center rounded-md border border-white/10 text-zinc-400/80 hover:text-rose-200 hover:border-rose-400/40 hover:bg-rose-500/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] transition"
+            title="Delete list"
+            onClick={onDeleteList}
+          >
+            <span class="relative inline-flex">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                class="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                <path d="M3 6h18" />
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </span>
+          </button>
+        </div>
       </header>
 
       <div
@@ -138,7 +140,7 @@ export default function KanbanList({
         "
       >
         <Show
-          when={tasks().length > 0}
+          when={tasks.length > 0}
           fallback={
             <div
               class="
@@ -151,23 +153,29 @@ export default function KanbanList({
             </div>
           }
         >
-          <For each={tasks()}>
-            {(task, i) =>
-              task.isDraft ? (
-                <InlineTaskEditor
-                  initial={task}
-                  onSave={(u) => handleSave(i(), u)}
-                  onCancel={() => handleCancel(i())}
-                  existingTags={existingTags()}
-                />
-              ) : (
-                <TaskCard
-                  task={task}
-                  onOpen={() => setOpenTaskIndex(i())}
-                  onAddTags={() => startEditAt(i())}
-                />
-              )
-            }
+          <For each={tasks}>
+            {(task, i) => (
+              <>
+                {task.isDraft ? (
+                  <InlineTaskEditor
+                    initial={task}
+                    onSave={(u) => handleSave(i(), u)}
+                    onCancel={() => handleCancel(i())}
+                    existingTags={existingTags()}
+                  />
+                ) : (
+                  <TaskCard
+                    task={task}
+                    onOpen={() => {
+                      setOpenTaskIndex(i());
+                      setSheetOpen(true);
+                    }}
+                    onAddTags={() => startEditAt(i())}
+                    onStartEdit={() => startEditAt(i())}
+                  />
+                )}
+              </>
+            )}
           </For>
         </Show>
       </div>
@@ -191,165 +199,23 @@ export default function KanbanList({
           + Add task
         </button>
       </div>
-      <Sheet
-        open={openTaskIndex() !== null}
-        onOpenChange={(v) => !v && setOpenTaskIndex(null)}
-      >
-        <SheetContent
-          side="right"
-          class={cn(
-            "bg-black/50 backdrop-blur-xl p-5 border",
-            priorityUi().sheetBorderClass
-          )}
-        >
-          <SheetHeader>
-            <SheetDescription class="text-sm tracking-wide text-zinc-500">
-              In list: <span class="text-zinc-300">{taskList.header}</span>
-            </SheetDescription>
-            <SheetTitle
-              class={cn(
-                "text-4xl sm:text-5xl md:text-6xl leading-tight",
-                priorityUi().titleTextClass
-              )}
-            >
-              {openTask()?.header ?? ""}
-            </SheetTitle>
-          </SheetHeader>
-
-          <div class="mt-5 space-y-5">
-            <div
-              class={cn(
-                "text-xs flex items-center gap-3",
-                priorityUi().metaTextClass
-              )}
-            >
-              <Show when={!!openTask()}>
-                <span>
-                  Created {openTask()?.createdAt.toLocaleDateString()}
-                </span>
-              </Show>
-              <Show when={!!openTask()?.dueDate}>
-                <span>• Due {openTask()?.dueDate?.toLocaleDateString()}</span>
-              </Show>
-              <Show when={!!openTask()?.priority}>
-                <span>• Priority {openTask()?.priority}</span>
-              </Show>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <For each={openTask()?.tags ?? []}>
-                {(tag) => (
-                  <span
-                    class="px-2.5 py-1 text-[11px] rounded-md text-zinc-200 border border-white/10"
-                    style={{
-                      "background-color": `${tag.color}33`,
-                      color: tag.color,
-                    }}
-                  >
-                    {tag.label}
-                  </span>
-                )}
-              </For>
-            </div>
-            {/* Divider line below tags */}
-            <div class="border-t border-white/10" />
-            <p class="text-base sm:text-lg text-zinc-300 leading-relaxed whitespace-pre-wrap">
-              {openTask()?.description || ""}
-            </p>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <TaskDetailsSheet
+        open={sheetOpen()}
+        onOpenChange={(v) => {
+          if (v) {
+            setSheetOpen(true);
+            return;
+          }
+          setSheetOpen(false);
+          // ! Delay clearing the task until the closing animation finishes
+          // ! Keep this in sync with the CSS close animation duration (~160-200ms)
+          setTimeout(() => setOpenTaskIndex(null), 200);
+        }}
+        task={openTask()}
+        taskList={taskList}
+        onUpdate={updateOpenTask}
+        existingTags={existingTags()}
+      />
     </section>
   );
-}
-
-function InlineListTitle({
-  value,
-  onSave,
-}: {
-  value: string;
-  onSave?: (val: string) => void;
-}) {
-  const [isEditing, setIsEditing] = createSignal(false);
-  const [text, setText] = createSignal(value);
-
-  function commit() {
-    const v = text().trim();
-    if (!v) {
-      setText(value);
-      setIsEditing(false);
-      return;
-    }
-    if (v !== value) onSave?.(v);
-    setIsEditing(false);
-  }
-
-  return (
-    <div>
-      <Show
-        when={isEditing()}
-        fallback={
-          <h3
-            class="text-sm font-medium text-zinc-100 tracking-wide cursor-text"
-            onDblClick={() => setIsEditing(true)}
-            title="Double-click to rename"
-          >
-            {value}
-          </h3>
-        }
-      >
-        <input
-          class="bg-transparent text-sm font-medium text-zinc-100 tracking-wide outline-none border-b border-white/10 focus:border-white/20"
-          value={text()}
-          onInput={(e) => setText(e.currentTarget.value)}
-          onBlur={() => {
-            if (!isEditing()) return;
-            commit();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") {
-              setText(value);
-              setIsEditing(false);
-            }
-          }}
-          autofocus
-        />
-      </Show>
-    </div>
-  );
-}
-
-type PriorityUiProps = {
-  sheetBorderClass: string;
-  titleTextClass: string;
-  metaTextClass: string;
-};
-
-function getPriorityUiProps(priority: Option<Priority>): PriorityUiProps {
-  switch (priority) {
-    case "low":
-      return {
-        sheetBorderClass: "border-emerald-500/30",
-        titleTextClass: "text-emerald-100",
-        metaTextClass: "text-emerald-300/80",
-      };
-    case "medium":
-      return {
-        sheetBorderClass: "border-amber-500/35",
-        titleTextClass: "text-amber-100",
-        metaTextClass: "text-amber-300/80",
-      };
-    case "high":
-      return {
-        sheetBorderClass: "border-rose-600/40",
-        titleTextClass: "text-rose-100",
-        metaTextClass: "text-rose-300/80",
-      };
-    default:
-      return {
-        sheetBorderClass: "border-white/10",
-        titleTextClass: "text-zinc-100",
-        metaTextClass: "text-zinc-400",
-      };
-  }
 }

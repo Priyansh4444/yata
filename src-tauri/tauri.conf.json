@@ -13,7 +13,6 @@
     "windows": [
       {
         "title": "Yata - Yet Another Todo App",
-        "fullscreen": true,
         "transparent": true
       }
     ],

@@ -76,9 +76,10 @@ function generateRandomTasks(count: number): Task[] {
           : Math.random() > 0.5
             ? "low"
             : undefined;
-    const dueDate = Math.random() > 0.6
-      ? daysFromNow(Math.floor(Math.random() * 14) + 1)
-      : undefined;
+    const dueDate =
+      Math.random() > 0.6
+        ? daysFromNow(Math.floor(Math.random() * 14) + 1)
+        : undefined;
     tasks.push(
       createTask(taskName, tags, description, {
         priority,

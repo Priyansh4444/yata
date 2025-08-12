@@ -4,12 +4,13 @@ import { createMemo, JSX } from "solid-js";
 import TagBadge from "@components/tags/tag-badge";
 
 function Dots({
-  priorityProps,
+  priority,
 }: {
-  priorityProps: PriorityProps;
+  priority: Option<Priority>;
 }): JSX.Element | null {
   const dots = createMemo(() => {
-    const { rgb, baseCount, opacity, sizeRange, blurRange } = priorityProps;
+    const { rgb, baseCount, opacity, sizeRange, blurRange } =
+      getPriorityProps(priority);
     if (!rgb || baseCount === 0) return null;
     const [r, g, b] = rgb;
     return Array.from({ length: baseCount }, () => {
@@ -54,49 +55,80 @@ export default function TaskCard({
   task,
   onOpen,
   onAddTags,
+  onStartEdit,
 }: {
   task: Task;
   onOpen?: () => void;
   onAddTags?: () => void;
+  onStartEdit?: () => void;
 }) {
-  const { header } = task;
+  const header: string = task.header;
   const hasTags: boolean = (task.tags?.length ?? 0) > 0;
   const isDraft: boolean = task.isDraft;
   // Potential error if invalid date, but this is an issue I think that should be faced in Input Validation
   const due: Option<Date> = task.dueDate ? new Date(task.dueDate) : undefined;
 
-  const priority = task.priority;
-  const priorityProps = getPriorityProps(priority);
+  const priorityProps = getPriorityProps(task.priority);
 
   function handleAddTagsClick(event: MouseEvent) {
     event.stopPropagation();
     if (onAddTags) onAddTags();
   }
+  function shouldIgnoreTarget(target: EventTarget | null): boolean {
+    const el = target as HTMLElement | null;
+    if (!el) return false;
+    const tag = (el.tagName || "").toLowerCase();
+    if (el.isContentEditable) return true;
+    return (
+      tag === "input" ||
+      tag === "textarea" ||
+      tag === "select" ||
+      tag === "button"
+    );
+  }
+
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key.toLowerCase() !== "e") return;
+    if (shouldIgnoreTarget(event.target)) return;
+    event.preventDefault();
+    onStartEdit?.();
+  }
+
+  function handleMouseEnter(event: MouseEvent) {
+    // Only focus if not already focused
+    const target = event.currentTarget as HTMLElement;
+    if (document.activeElement !== target) {
+      target.focus();
+    }
+  }
 
   return (
     <article
       class={cn(
-        "task-card group relative rounded-xl p-6 min-h-[110px] bg-black/50 backdrop-blur-sm border",
+        "task-card group relative rounded-xl p-6 min-h-[110px] bg-black/50 backdrop-blur-sm border outline-none",
         "shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_8px_24px_-12px_rgba(0,0,0,0.8)] transition-colors duration-150 cursor-pointer",
-        priorityProps.borderClass
+        priorityProps.borderClass,
       )}
       onClick={onOpen}
+      onMouseEnter={handleMouseEnter}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
     >
-      {priority && <Dots priorityProps={priorityProps} />}
+      {task.priority && <Dots priority={task.priority} />}
       <header class="flex items-start justify-between gap-3">
         <div class="min-w-0">
           <h2
             class={cn(
               "text-base sm:text-lg font-semibold leading-snug line-clamp-2",
-              priorityProps.headerTextClass
+              priorityProps.headerTextClass,
             )}
           >
-            {header}
+            {header.trim() || "Untitled Task"}
           </h2>
           <div
             class={cn(
               "mt-1 flex items-center gap-2 text-[11px]",
-              priorityProps.metaTextClass
+              priorityProps.metaTextClass,
             )}
           >
             {due && <span>Due {due.toLocaleDateString()}</span>}
