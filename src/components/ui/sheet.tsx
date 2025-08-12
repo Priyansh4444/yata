@@ -33,9 +33,9 @@ export const sheetVariants = cva(
 
 type sheetContentProps<T extends ValidComponent = "div"> = ParentProps<
   DialogContentProps<T> &
-  VariantProps<typeof sheetVariants> & {
-    class?: string;
-  }
+    VariantProps<typeof sheetVariants> & {
+      class?: string;
+    }
 >;
 
 export const SheetContent = <T extends ValidComponent = "div">(
@@ -54,7 +54,10 @@ export const SheetContent = <T extends ValidComponent = "div">(
         class={cn("fixed inset-0 z-50 bg-black/60 sheet-overlay")}
       />
       <DialogPrimitive.Content
-        class={cn(sheetVariants({ side: local.side, class: local.class }), "sheet-content")}
+        class={cn(
+          sheetVariants({ side: local.side, class: local.class }),
+          "sheet-content",
+        )}
         data-side={local.side}
         {...rest}
       >

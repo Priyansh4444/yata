@@ -20,7 +20,9 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
 
   function renameListAt(index: number, newHeader: string) {
     setLists((prev) =>
-      prev.map((list, i) => (i === index ? { ...list, header: newHeader } : list)),
+      prev.map((list, i) =>
+        i === index ? { ...list, header: newHeader } : list,
+      ),
     );
   }
 

@@ -1,6 +1,6 @@
 // Returns yyyy-MM-dd from a Date or string, using local time (not UTC)
 function toLocalDateInputString(
-  date: Date | string | undefined
+  date: Date | string | undefined,
 ): string | undefined {
   if (!date) return undefined;
   const d = typeof date === "string" ? new Date(date) : date;
@@ -48,13 +48,13 @@ export default function InlineTaskEditor(props: Props) {
   }
 
   function handleHeaderInput(
-    e: InputEvent & { currentTarget: HTMLInputElement }
+    e: InputEvent & { currentTarget: HTMLInputElement },
   ) {
     setForm("header", e.currentTarget.value);
   }
 
   function handleDescriptionInput(
-    e: InputEvent & { currentTarget: HTMLTextAreaElement }
+    e: InputEvent & { currentTarget: HTMLTextAreaElement },
   ) {
     setForm("description", e.currentTarget.value);
   }
@@ -106,7 +106,7 @@ export default function InlineTaskEditor(props: Props) {
           onChange={(e) =>
             setForm(
               "priority",
-              (e.currentTarget.value || undefined) as Task["priority"]
+              (e.currentTarget.value || undefined) as Task["priority"],
             )
           }
         >

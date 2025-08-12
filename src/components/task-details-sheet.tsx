@@ -1,4 +1,13 @@
-import { Show, For, JSX, createMemo, createSignal, createEffect, on, onCleanup } from "solid-js";
+import {
+  Show,
+  For,
+  JSX,
+  createMemo,
+  createSignal,
+  createEffect,
+  on,
+  onCleanup,
+} from "solid-js";
 import { Task, TaskList, Priority, Option, Tag } from "@/types";
 import {
   Sheet,
@@ -90,7 +99,9 @@ export default function TaskDetailsSheet(
     if (debouncedId) clearTimeout(debouncedId);
   });
 
-  function toLocalDateInputString(date: Date | string | undefined): string | undefined {
+  function toLocalDateInputString(
+    date: Date | string | undefined,
+  ): string | undefined {
     if (!date) return undefined;
     const d = typeof date === "string" ? new Date(date) : date;
     if (isNaN(d.getTime())) return undefined;
@@ -150,15 +161,24 @@ export default function TaskDetailsSheet(
                 class="bg-transparent text-xs text-zinc-300 border border-white/10 rounded-md px-2 py-1"
                 value={prio() ?? ""}
                 onChange={(e) => {
-                  const value = (e.currentTarget.value || undefined) as Option<Priority>;
+                  const value = (e.currentTarget.value ||
+                    undefined) as Option<Priority>;
                   setPrio(value);
                   debounceUpdate({ priority: value });
                 }}
               >
-                <option value="" class="bg-black">Priority</option>
-                <option value="low" class="bg-black">Low</option>
-                <option value="medium" class="bg-black">Medium</option>
-                <option value="high" class="bg-black">High</option>
+                <option value="" class="bg-black">
+                  Priority
+                </option>
+                <option value="low" class="bg-black">
+                  Low
+                </option>
+                <option value="medium" class="bg-black">
+                  Medium
+                </option>
+                <option value="high" class="bg-black">
+                  High
+                </option>
               </select>
               <input
                 type="date"
@@ -194,10 +214,14 @@ export default function TaskDetailsSheet(
                 class="ml-2 shrink-0 px-2 py-1 text-[11px] rounded-md border border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
                 onClick={() => setEditingTags((v) => !v)}
               >
-                <Show when={(props.task?.tags?.length ?? 0) === 0 && !editingTags()}>
+                <Show
+                  when={(props.task?.tags?.length ?? 0) === 0 && !editingTags()}
+                >
                   + Add tags
                 </Show>
-                <Show when={(props.task?.tags?.length ?? 0) > 0 || editingTags()}>
+                <Show
+                  when={(props.task?.tags?.length ?? 0) > 0 || editingTags()}
+                >
                   {editingTags() ? "Done" : "Edit tags"}
                 </Show>
               </button>
