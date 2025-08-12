@@ -1,121 +1,253 @@
 @import "tailwindcss";
+/*@plugins "tailwindcss-animate"*/
 
 @layer base {
-  :root {
-    --kb-scrollbar-thumb: hsl(var(--foreground) / 0.9);
-    --kb-scrollbar-thumb-hover: hsl(var(--foreground) / 0.95);
-    --kb-scrollbar-thumb-border: hsl(var(--background) / 0.6);
-    --kb-scrollbar-track: transparent;
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    :root {
+        --kb-scrollbar-thumb: hsl(var(--foreground) / 0.9);
+        --kb-scrollbar-thumb-hover: hsl(var(--foreground) / 0.95);
+        --kb-scrollbar-thumb-border: hsl(var(--background) / 0.6);
+        --kb-scrollbar-track: transparent;
+        --background: 0 0% 100%;
+        --foreground: 240 10% 3.9%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 240 10% 3.9%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 240 10% 3.9%;
 
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
+        --primary: 240 5.9% 10%;
+        --primary-foreground: 0 0% 98%;
 
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+        --secondary: 240 4.8% 95.9%;
+        --secondary-foreground: 240 5.9% 10%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+        --muted: 240 4.8% 95.9%;
+        --muted-foreground: 240 3.8% 46.1%;
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+        --accent: 240 4.8% 95.9%;
+        --accent-foreground: 240 5.9% 10%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
 
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
+        --border: 240 5.9% 90%;
+        --input: 240 5.9% 90%;
+        --ring: 240 10% 3.9%;
 
-    --radius: 0.5rem;
-  }
+        --radius: 0.5rem;
+    }
 
-  [data-kb-theme="dark"] {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    [data-kb-theme="dark"] {
+        --background: 240 10% 3.9%;
+        --foreground: 0 0% 98%;
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+        --card: 240 10% 3.9%;
+        --card-foreground: 0 0% 98%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+        --popover: 240 10% 3.9%;
+        --popover-foreground: 0 0% 98%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 240 5.9% 10%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+        --secondary: 240 3.7% 15.9%;
+        --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+        --muted: 240 3.7% 15.9%;
+        --muted-foreground: 240 5% 64.9%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+        --accent: 240 3.7% 15.9%;
+        --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-  }
+        --border: 240 3.7% 15.9%;
+        --input: 240 3.7% 15.9%;
+        --ring: 240 4.9% 83.9%;
+    }
 }
 
 @layer utilities {
+    .sheet-overlay[data-expanded] {
+        animation: sheet-fade-in 160ms ease-out forwards;
+    }
+    .sheet-overlay[data-closed] {
+        animation: sheet-fade-out 140ms ease-in forwards;
+    }
 
-  /* minimal, pure-black themed scrollbars */
-  .scrollbar-black {
-    scrollbar-width: thin;
-    scrollbar-color: var(--kb-scrollbar-thumb) var(--kb-scrollbar-track);
-  }
+    .sheet-content[data-side="right"][data-expanded] {
+        animation: sheet-slide-in-right 200ms ease-out forwards;
+    }
+    .sheet-content[data-side="left"][data-expanded] {
+        animation: sheet-slide-in-left 200ms ease-out forwards;
+    }
+    .sheet-content[data-side="top"][data-expanded] {
+        animation: sheet-slide-in-top 200ms ease-out forwards;
+    }
+    .sheet-content[data-side="bottom"][data-expanded] {
+        animation: sheet-slide-in-bottom 200ms ease-out forwards;
+    }
 
-  .scrollbar-black::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
+    .sheet-content[data-side="right"][data-closed] {
+        animation: sheet-slide-out-right 160ms ease-in forwards;
+    }
+    .sheet-content[data-side="left"][data-closed] {
+        animation: sheet-slide-out-left 160ms ease-in forwards;
+    }
+    .sheet-content[data-side="top"][data-closed] {
+        animation: sheet-slide-out-top 160ms ease-in forwards;
+    }
+    .sheet-content[data-side="bottom"][data-closed] {
+        animation: sheet-slide-out-bottom 160ms ease-in forwards;
+    }
 
-  .scrollbar-black::-webkit-scrollbar-track {
-    background: transparent;
-  }
+    @keyframes sheet-fade-in {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+    @keyframes sheet-fade-out {
+        from {
+            opacity: 1;
+        }
+        to {
+            opacity: 0;
+        }
+    }
 
-  .scrollbar-black::-webkit-scrollbar-thumb {
-    background-color: var(--kb-scrollbar-thumb);
-    /* near-black */
-    border-radius: 9999px;
-    border: 2px solid var(--kb-scrollbar-thumb-border);
-    /* blend with background */
-  }
+    @keyframes sheet-slide-in-right {
+        from {
+            transform: translate3d(8%, 0, 0);
+            opacity: 0;
+        }
+        to {
+            transform: translate3d(0, 0, 0);
+            opacity: 1;
+        }
+    }
+    @keyframes sheet-slide-out-right {
+        from {
+            transform: translate3d(0, 0, 0);
+            opacity: 1;
+        }
+        to {
+            transform: translate3d(8%, 0, 0);
+            opacity: 0;
+        }
+    }
+    @keyframes sheet-slide-in-left {
+        from {
+            transform: translate3d(-8%, 0, 0);
+            opacity: 0;
+        }
+        to {
+            transform: translate3d(0, 0, 0);
+            opacity: 1;
+        }
+    }
+    @keyframes sheet-slide-out-left {
+        from {
+            transform: translate3d(0, 0, 0);
+            opacity: 1;
+        }
+        to {
+            transform: translate3d(-8%, 0, 0);
+            opacity: 0;
+        }
+    }
+    @keyframes sheet-slide-in-top {
+        from {
+            transform: translate3d(0, -8%, 0);
+            opacity: 0;
+        }
+        to {
+            transform: translate3d(0, 0, 0);
+            opacity: 1;
+        }
+    }
+    @keyframes sheet-slide-out-top {
+        from {
+            transform: translate3d(0, 0, 0);
+            opacity: 1;
+        }
+        to {
+            transform: translate3d(0, -8%, 0);
+            opacity: 0;
+        }
+    }
+    @keyframes sheet-slide-in-bottom {
+        from {
+            transform: translate3d(0, 8%, 0);
+            opacity: 0;
+        }
+        to {
+            transform: translate3d(0, 0, 0);
+            opacity: 1;
+        }
+    }
+    @keyframes sheet-slide-out-bottom {
+        from {
+            transform: translate3d(0, 0, 0);
+            opacity: 1;
+        }
+        to {
+            transform: translate3d(0, 8%, 0);
+            opacity: 0;
+        }
+    }
 
-  .scrollbar-black::-webkit-scrollbar-thumb:hover {
-    background-color: var(--kb-scrollbar-thumb-hover);
-  }
+    /* minimal, pure-black themed scrollbars */
+    .scrollbar-black {
+        scrollbar-width: thin;
+        scrollbar-color: var(--kb-scrollbar-thumb) var(--kb-scrollbar-track);
+    }
+
+    .scrollbar-black::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    .scrollbar-black::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .scrollbar-black::-webkit-scrollbar-thumb {
+        background-color: var(--kb-scrollbar-thumb);
+        /* near-black */
+        border-radius: 9999px;
+        border: 2px solid var(--kb-scrollbar-thumb-border);
+        /* blend with background */
+    }
+
+    .scrollbar-black::-webkit-scrollbar-thumb:hover {
+        background-color: var(--kb-scrollbar-thumb-hover);
+    }
 }
 
 @font-face {
-  font-family: "PPEditorialNew-UltralightItalic";
-  src: url("/fonts/PPEditorialNew-UltralightItalic.ttf") format("truetype");
-  font-weight: normal;
-  font-style: italic;
+    font-family: "PPEditorialNew-UltralightItalic";
+    src: url("/fonts/PPEditorialNew-UltralightItalic.ttf") format("truetype");
+    font-weight: normal;
+    font-style: italic;
 }
 
 @font-face {
-  font-family: "Inter";
-  src: url("/fonts/Inter-Italic-VariableFont_opsz,wght.ttf") format("truetype-variations");
-  font-style: italic;
-  font-weight: 100 900;
+    font-family: "Inter";
+    src: url("/fonts/Inter-Italic-VariableFont_opsz,wght.ttf")
+        format("truetype-variations");
+    font-style: italic;
+    font-weight: 100 900;
 }
 
 .font-inter {
-  font-family: "Inter", sans-serif;
+    font-family: "Inter", sans-serif;
 }
 
 .font-pp-editorial {
-  font-family: "PPEditorialNew-UltralightItalic", sans-serif;
+    font-family: "PPEditorialNew-UltralightItalic", sans-serif;
 }
