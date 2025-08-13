@@ -1,6 +1,6 @@
-# Tauri + Solid + Typescript
+# Yata
 
-This template should help get you started developing with Tauri, Solid and Typescript in Vite.
+Kanban-style tasks powered by Solid and Tauri.
 
 ## Recommended IDE Setup
 
