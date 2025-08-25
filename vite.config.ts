@@ -16,6 +16,10 @@ export default defineConfig(async () => ({
       "@types": new URL("./src/types", import.meta.url).pathname,
     },
   },
+  // Since SolidMarkdown needs these dependencies
+  optimizeDeps: {
+    include: ['solid-markdown > micromark', 'solid-markdown > unified'],
+  },
   assetsInclude: ["fonts/*"],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

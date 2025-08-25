@@ -23,7 +23,7 @@ import {
 } from "@components/ui/sheet";
 import { cn } from "@/libs/cn";
 import TagPicker from "@components/tags/tag-picker";
-
+import { SolidMarkdown } from "solid-markdown";
 type PriorityUiProps = {
   sheetBorderClass: string;
   titleTextClass: string;
@@ -75,7 +75,9 @@ export default function TaskDetailsSheet(
   const [editingTags, setEditingTags] = createSignal(false);
   const [title, setTitle] = createSignal<string>(props.task?.header ?? "");
   const [desc, setDesc] = createSignal<string>(props.task?.description ?? "");
-  const [priority, setPriority] = createSignal<Option<Priority>>(props.task?.priority);
+  const [priority, setPriority] = createSignal<Option<Priority>>(
+    props.task?.priority,
+  );
   const [dueStr, setDueStr] = createSignal<string>(
     toLocalDateInputString(props.task?.dueDate) ?? "",
   );
@@ -177,14 +179,15 @@ export default function TaskDetailsSheet(
                     {itemProps.item.textValue === ""
                       ? "Priority"
                       : itemProps.item.textValue.charAt(0).toUpperCase() +
-                        itemProps.item.textValue.slice(1)}
+                      itemProps.item.textValue.slice(1)}
                   </SelectItem>
                 )}
               >
                 <SelectTrigger class="min-w-[120px] bg-transparent text-xs text-zinc-300">
                   <span class="opacity-80">
                     {priority()
-                      ? priority()!.charAt(0).toUpperCase() + priority()!.slice(1)
+                      ? priority()!.charAt(0).toUpperCase() +
+                      priority()!.slice(1)
                       : "Priority"}
                   </span>
                 </SelectTrigger>
@@ -246,6 +249,16 @@ export default function TaskDetailsSheet(
           </div>
           {/* Divider line below tags */}
           <div class="border-t border-white/10" />
+          {/*
+            The reason "# something" and "## something" may not appear different is likely due to missing or insufficient CSS styles for markdown headings.
+            By default, SolidMarkdown renders <h1>, <h2>, etc., but if your stylesheet doesn't style these tags, they will look the same.
+            You can fix this by adding custom styles for markdown headings.
+          */}
+          <SolidMarkdown
+            class="text-white [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:mb-2"
+            rendering-strategy="reconcile"
+            children={desc()}
+          ></SolidMarkdown>
           <textarea
             class="w-full bg-transparent text-base sm:text-lg text-zinc-300 placeholder-zinc-600 outline-none leading-relaxed resize-none"
             rows={8}
