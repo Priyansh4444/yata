@@ -15,7 +15,6 @@ export default function NewListCard({
     onAdd(v);
     setName("");
   }
-
   return (
     <div class="flex-1 rounded-2xl border border-white/10 bg-gradient-radial from-white/5 via-white/0 to-transparent backdrop-blur-sm p-3 flex flex-col">
       <div class="sticky top-0 z-10 flex items-center justify-between px-2 py-2 rounded-xl bg-black/20 border-b border-white/5">

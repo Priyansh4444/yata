@@ -1,33 +1,46 @@
 import { TaskList } from "@/types";
-import KanbanList from "@components/task-list";
-import { For, Show, createSignal } from "solid-js";
+import KanbanList from "@/components/task-list/task-list";
+import { For, Show, createSignal, onMount, onCleanup } from "solid-js";
+import { createStore, reconcile, unwrap } from "solid-js/store";
 import { createTaskList } from "@/utils";
-import NewListCard from "@components/new-list-card";
+import NewListCard from "@/components/task-list/task-list.create";
+import { createUndoRedo } from "@/libs/undo";
 
 export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
-  const [lists, setLists] = createSignal<TaskList[]>(taskLists);
-  const [isAdding, setIsAdding] = createSignal(false);
-  const [newListName, setNewListName] = createSignal("");
+  const [lists, setLists] = createStore<TaskList[]>(taskLists);
+  const [isAdding, setIsAdding] = createSignal<boolean>(false);
+  const [newListName, setNewListName] = createSignal<string>("");
+  const history = createUndoRedo<TaskList[]>({ limit: 100 });
+
+  function snapshotBoard() {
+    // Clone only the board structure to avoid regenerating per-card random visuals
+    // Getting the raw data  https://docs.solidjs.com/concepts/stores#extracting-raw-data-with-unwrap
+    history.push(unwrap(lists));
+  }
 
   function addList(name?: string) {
+    snapshotBoard();
     const header = (name ?? newListName()).trim();
     if (header.length === 0) return; // no-op on empty input
     const newList = createTaskList(header, []);
-    setLists((prev) => [...prev, newList]);
+    setLists(taskLists.length, newList);
     setNewListName("");
     setIsAdding(false);
   }
 
   function renameListAt(index: number, newHeader: string) {
-    setLists((prev) =>
-      prev.map((list, i) =>
-        i === index ? { ...list, header: newHeader } : list,
-      ),
-    );
+    setLists(index, (taskList) => {
+      return {
+        ...taskList,
+        header: newHeader.trim(),
+      };
+    });
   }
 
   function deleteListAt(index: number) {
-    setLists((prev) => prev.filter((_, i) => i !== index));
+    snapshotBoard();
+    const next = lists.filter((_, i) => i !== index);
+    setLists(reconcile(next)); // reconcile to avoid non diff data to trigger re-renders
   }
 
   function startAdd() {
@@ -40,9 +53,36 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
     setNewListName("");
   }
 
+  function handleKeydown(e: KeyboardEvent) {
+    const isCtrl = e.ctrlKey || e.metaKey;
+    if (!isCtrl) return;
+    if (e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      const prev = history.undo(
+        (lists as unknown as TaskList[]).map((l) => ({
+          header: l.header,
+          tasks: l.tasks,
+        })),
+      );
+      if (prev) setLists(prev as TaskList[]);
+    } else if (e.key.toLowerCase() === "y") {
+      e.preventDefault();
+      const next = history.redo(
+        (lists as unknown as TaskList[]).map((l) => ({
+          header: l.header,
+          tasks: l.tasks,
+        })),
+      );
+      if (next) setLists(next as TaskList[]);
+    }
+  }
+
+  onMount(() => window.addEventListener("keydown", handleKeydown));
+  onCleanup(() => window.removeEventListener("keydown", handleKeydown));
+
   return (
     <div class="kanban-board h-full flex flex-row gap-6 overflow-x-auto pb-4 scrollbar-black">
-      <For each={lists()}>
+      <For each={lists}>
         {(list, i) => (
           <KanbanList
             taskList={list}

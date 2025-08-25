@@ -10,6 +10,12 @@ import {
 } from "solid-js";
 import { Task, TaskList, Priority, Option, Tag } from "@/types";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -69,7 +75,7 @@ export default function TaskDetailsSheet(
   const [editingTags, setEditingTags] = createSignal(false);
   const [title, setTitle] = createSignal<string>(props.task?.header ?? "");
   const [desc, setDesc] = createSignal<string>(props.task?.description ?? "");
-  const [prio, setPrio] = createSignal<Option<Priority>>(props.task?.priority);
+  const [priority, setPriority] = createSignal<Option<Priority>>(props.task?.priority);
   const [dueStr, setDueStr] = createSignal<string>(
     toLocalDateInputString(props.task?.dueDate) ?? "",
   );
@@ -81,7 +87,7 @@ export default function TaskDetailsSheet(
       () => {
         setTitle(props.task?.header ?? "");
         setDesc(props.task?.description ?? "");
-        setPrio(props.task?.priority);
+        setPriority(props.task?.priority);
         setDueStr(toLocalDateInputString(props.task?.dueDate) ?? "");
         setEditingTags(false);
       },
@@ -157,29 +163,33 @@ export default function TaskDetailsSheet(
               </Show>
             </span>
             <div class="flex items-center gap-2">
-              <select
-                class="bg-transparent text-xs text-zinc-300 border border-white/10 rounded-md px-2 py-1"
-                value={prio() ?? ""}
-                onChange={(e) => {
-                  const value = (e.currentTarget.value ||
-                    undefined) as Option<Priority>;
-                  setPrio(value);
-                  debounceUpdate({ priority: value });
+              <Select
+                multiple={false}
+                options={["", "low", "medium", "high"]}
+                value={priority() ?? ""}
+                onChange={(value) => {
+                  const v = (value || undefined) as Option<Priority>;
+                  setPriority(v);
+                  debounceUpdate({ priority: v });
                 }}
+                itemComponent={(itemProps) => (
+                  <SelectItem item={itemProps.item}>
+                    {itemProps.item.textValue === ""
+                      ? "Priority"
+                      : itemProps.item.textValue.charAt(0).toUpperCase() +
+                        itemProps.item.textValue.slice(1)}
+                  </SelectItem>
+                )}
               >
-                <option value="" class="bg-black">
-                  Priority
-                </option>
-                <option value="low" class="bg-black">
-                  Low
-                </option>
-                <option value="medium" class="bg-black">
-                  Medium
-                </option>
-                <option value="high" class="bg-black">
-                  High
-                </option>
-              </select>
+                <SelectTrigger class="min-w-[120px] bg-transparent text-xs text-zinc-300">
+                  <span class="opacity-80">
+                    {priority()
+                      ? priority()!.charAt(0).toUpperCase() + priority()!.slice(1)
+                      : "Priority"}
+                  </span>
+                </SelectTrigger>
+                <SelectContent class="text-xs" />
+              </Select>
               <input
                 type="date"
                 class="bg-transparent text-xs text-zinc-300 border border-white/10 rounded-md px-2 py-1"
@@ -197,14 +207,14 @@ export default function TaskDetailsSheet(
               <div class="flex flex-wrap gap-2">
                 <For each={props.task?.tags ?? []}>
                   {(tag: Tag) => (
-                    <span
-                      class="px-2.5 py-1 text-[11px] rounded-md text-zinc-200 border border-white/10"
-                      style={{
-                        "background-color": `${tag.color}33`,
-                        color: tag.color,
-                      }}
-                    >
-                      {tag.label}
+                    <span class="inline-flex items-center gap-1">
+                      <span
+                        class="h-1.5 w-1.5 rounded-full"
+                        style={{ background: tag.color }}
+                      />
+                      <span class="text-[11px] text-zinc-200/90">
+                        <span style={{ color: tag.color }}>{tag.label}</span>
+                      </span>
                     </span>
                   )}
                 </For>

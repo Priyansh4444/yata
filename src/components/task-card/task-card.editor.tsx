@@ -1,25 +1,20 @@
-// Returns yyyy-MM-dd from a Date or string, using local time (not UTC)
-function toLocalDateInputString(
-  date: Date | string | undefined,
-): string | undefined {
-  if (!date) return undefined;
-  const d = typeof date === "string" ? new Date(date) : date;
-  if (isNaN(d.getTime())) return undefined;
-  const y = d.getFullYear();
-  const m = (d.getMonth() + 1).toString().padStart(2, "0");
-  const day = d.getDate().toString().padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 import { createMemo } from "solid-js";
 import { createStore } from "solid-js/store";
 import type { Option, Task, Tag, Priority } from "@/types";
 import TagPicker from "@components/tags/tag-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@components/ui/select";
+import { toLocalDateInputString } from "@/utils/time";
 
 type Props = {
   onSave: (updates: Partial<Task>) => void;
   onCancel: () => void;
-  initial?: Partial<Task>;
-  existingTags?: Tag[];
+  initial?: Partial<Task>; // creating a new task starts it with undefined
+  existingTags?: Tag[]; // all the currently existing tags that exist.
 };
 
 export default function InlineTaskEditor(props: Props) {
@@ -59,13 +54,11 @@ export default function InlineTaskEditor(props: Props) {
     setForm("description", e.currentTarget.value);
   }
 
-  // no-op placeholder removed; TagPicker manages its own inputs
-
   function parseLocalDateInput(input: string | undefined): Date | undefined {
     if (!input) return undefined;
-    const [y, m, d] = input.split("-").map(Number);
-    if (!y || !m || !d) return undefined;
-    const date = new Date(y, m - 1, d);
+    const [year, month, day] = input.split("-").map(Number);
+    if (!year || !month || !day) return undefined;
+    const date = new Date(year, month - 1, day);
     return isNaN(date.getTime()) ? undefined : date;
   }
 
@@ -100,29 +93,30 @@ export default function InlineTaskEditor(props: Props) {
         onInput={handleDescriptionInput}
       />
       <div class="flex items-center gap-2">
-        <select
-          class="bg-transparent text-xs text-zinc-300 border border-white/10 rounded-md px-2 py-1"
-          value={form.priority ?? ""}
-          onChange={(e) =>
-            setForm(
-              "priority",
-              (e.currentTarget.value || undefined) as Task["priority"],
-            )
-          }
+        <Select
+          multiple={false}
+          options={["", "low", "medium", "high"]}
+          value={form.priority ?? undefined}
+          onChange={(value) => setForm("priority", value ?? undefined)}
+          itemComponent={(itemProps) => (
+            <SelectItem item={itemProps.item}>
+              {itemProps.item.textValue === ""
+                ? "Priority"
+                : itemProps.item.textValue.charAt(0).toUpperCase() +
+                  itemProps.item.textValue.slice(1)}
+            </SelectItem>
+          )}
         >
-          <option value="" class="bg-black">
-            Priority
-          </option>
-          <option value="low" class="bg-black">
-            Low
-          </option>
-          <option value="medium" class="bg-black">
-            Medium
-          </option>
-          <option value="high" class="bg-black">
-            High
-          </option>
-        </select>
+          <SelectTrigger class="min-w-[120px] bg-transparent text-xs text-white">
+            <span class="opacity-80">
+              {form.priority
+                ? (form.priority as string).charAt(0).toUpperCase() +
+                  (form.priority as string).slice(1)
+                : "Priority"}
+            </span>
+          </SelectTrigger>
+          <SelectContent class="text-xs" />
+        </Select>
         <input
           type="date"
           class="bg-transparent text-xs text-zinc-300 border border-white/10 rounded-md px-2 py-1"

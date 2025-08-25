@@ -66,17 +66,16 @@ export default function TagPicker(props: Props) {
       <div class="flex flex-wrap gap-1.5">
         <For each={props.value}>
           {(tag) => (
-            <span class="inline-flex items-center gap-1">
-              <TagBadge tag={tag} />
-              <button
-                type="button"
-                class="ml-1 h-4 w-4 grid place-items-center rounded hover:bg-white/10"
-                onClick={() => removeTag(tag.label)}
-                aria-label={`Remove ${tag.label}`}
-              >
-                ×
-              </button>
-            </span>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-0.5 text-[11px] hover:bg-white/10 transition-colors"
+              style={{ "background-color": `${tag.color}22`, color: tag.color }}
+              onClick={() => removeTag(tag.label)}
+              title={`Remove ${tag.label}`}
+            >
+              <span class="-ml-0.5 mr-0.5 h-4 w-4 grid place-items-center rounded">×</span>
+              <span>{tag.label}</span>
+            </button>
           )}
         </For>
       </div>

@@ -3,7 +3,7 @@ import HeaderText from "@components/header-text";
 import BottomDock from "@components/bottom-dock";
 import KanbanBoard from "@components/kanban-board";
 import { Route, Router } from "@solidjs/router";
-import SettingsPage from "@components/settings-page";
+import SettingsPage from "@/pages/settings-page";
 import { generateRandomTaskLists } from "@/utils";
 import { Index } from "solid-js";
 

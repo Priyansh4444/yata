@@ -1,12 +1,20 @@
-import { For, Show, createMemo, createSignal } from "solid-js";
-import { createStore } from "solid-js/store";
+import {
+  For,
+  Show,
+  createMemo,
+  createSignal,
+  onCleanup,
+  onMount,
+} from "solid-js";
+import { createStore, reconcile } from "solid-js/store";
 import { Task, TaskList, Tag } from "@/types";
-import TaskCard from "@components/task-card";
-import InlineTaskEditor from "@components/inline-task-editor";
+import TaskCard from "@/components/task-card/task-card";
+import InlineTaskEditor from "@/components/task-card/task-card.editor";
 import { createTask } from "@/utils";
-import InlineListTitle from "@components/inline-list-title";
+import InlineListTitle from "@/components/task-list/task-list.title-edit";
 import TaskDetailsSheet from "@components/task-details-sheet";
-
+import { createUndoRedo } from "@/libs/undo";
+import useRerenderLogger from "@/utils/check-re-render";
 export default function KanbanList({
   taskList,
   onRenameList,
@@ -16,10 +24,15 @@ export default function KanbanList({
   onRenameList: (name: string) => void;
   onDeleteList: () => void;
 }) {
+  // Creating a store of a store for deeper fine-grained reactivity
   const [tasks, setTasks] = createStore<Task[]>(taskList.tasks);
   const [openTaskIndex, setOpenTaskIndex] = createSignal<number | null>(null);
   const [sheetOpen, setSheetOpen] = createSignal<boolean>(false);
+  const history = createUndoRedo<Task[]>({ limit: 100 });
 
+  useRerenderLogger(() => taskList.tasks, "KanbanList tasks");
+  useRerenderLogger(openTaskIndex, "OpenTaskIndex");
+  useRerenderLogger(sheetOpen, "SheetOpen");
   const hasDraft = createMemo(() => tasks.some((t) => t.isDraft));
 
   const openTask = createMemo(() => {
@@ -42,12 +55,20 @@ export default function KanbanList({
     setTasks(index, "isDraft", true);
   }
 
+  function snapshot() {
+    // Solid store arrays are proxies; convert to plain objects for cloning
+    const plain = tasks.map((t) => ({ ...t }));
+    history.push(plain as Task[]);
+  }
+
   function startAddNew() {
+    snapshot();
     const newTask: Task = createTask("", [], undefined, { isDraft: true });
     setTasks([newTask, ...tasks]);
   }
 
   function handleSave(index: number, updates: Partial<Task>) {
+    snapshot();
     const patch: Partial<Task> = { ...updates };
     if (patch.header !== undefined) patch.header = patch.header.trim();
     patch.isDraft = false;
@@ -58,6 +79,7 @@ export default function KanbanList({
     const task = tasks[index];
     if (!task) return;
     if ((task.header ?? "").trim() === "") {
+      snapshot();
       setTasks(tasks.filter((_, i) => i !== index));
     } else {
       setTasks(index, "isDraft", false);
@@ -67,10 +89,32 @@ export default function KanbanList({
   function updateOpenTask(updates: Partial<Task>) {
     const index = openTaskIndex();
     if (index === null) return;
+    snapshot();
     Object.entries(updates).forEach(([key, value]) => {
       setTasks(index, key as keyof Task, value);
     });
   }
+
+  function handleKeydown(e: KeyboardEvent) {
+    const isCtrl = e.ctrlKey || e.metaKey;
+    if (!isCtrl) return;
+    if (e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      const prev = history.undo(tasks.map((t) => ({ ...t })) as Task[]);
+      if (prev) setTasks(reconcile(prev as Task[]));
+    } else if (e.key.toLowerCase() === "y") {
+      e.preventDefault();
+      const next = history.redo(tasks.map((t) => ({ ...t })) as Task[]);
+      if (next) setTasks(reconcile(next as Task[]));
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener("keydown", handleKeydown);
+  });
+  onCleanup(() => {
+    window.removeEventListener("keydown", handleKeydown);
+  });
 
   return (
     <section
