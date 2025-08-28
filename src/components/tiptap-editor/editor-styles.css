@@ -1,0 +1,44 @@
+/* TipTap Editor Styles */
+/* Import KaTeX CSS for math rendering */
+@import 'katex/dist/katex.min.css';
+
+/* Syntax highlighting styles for lowlight */
+#editor .hljs-keyword { color: #c792ea; font-weight: bold; }
+#editor .hljs-string { color: #c3e88d; }
+#editor .hljs-number { color: #f78c6c; }
+#editor .hljs-comment { color: #546e7a; font-style: italic; }
+#editor .hljs-function { color: #82aaff; }
+#editor .hljs-built_in { color: #ffcb6b; }
+#editor .hljs-title { color: #ffcb6b; font-weight: bold; }
+#editor .hljs-params { color: #eeffff; }
+#editor .hljs-type { color: #c792ea; }
+
+/* Ensure code blocks have proper styling */
+#editor pre {
+  background-color: #0e0e0e;
+  border-radius: 0.375rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+#editor code {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.875rem;
+}
+
+/* Math (KaTeX) dark theme tweaks */
+#editor .katex { color: #ffffff; }
+#editor .katex-display { margin: 1rem 0; }
+#editor .katex .base { color: #ffffff; }
+
+/* YouTube embed container */
+#editor .youtube-container {
+  margin: 1rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+#editor .youtube-container iframe {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}

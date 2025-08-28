@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/*  */
+@plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 
 @layer base {
@@ -73,6 +75,7 @@
     .sheet-overlay[data-expanded] {
         animation: sheet-fade-in 160ms ease-out forwards;
     }
+
     .sheet-overlay[data-closed] {
         animation: sheet-fade-out 140ms ease-in forwards;
     }
@@ -80,12 +83,15 @@
     .sheet-content[data-side="right"][data-expanded] {
         animation: sheet-slide-in-right 200ms ease-out forwards;
     }
+
     .sheet-content[data-side="left"][data-expanded] {
         animation: sheet-slide-in-left 200ms ease-out forwards;
     }
+
     .sheet-content[data-side="top"][data-expanded] {
         animation: sheet-slide-in-top 200ms ease-out forwards;
     }
+
     .sheet-content[data-side="bottom"][data-expanded] {
         animation: sheet-slide-in-bottom 200ms ease-out forwards;
     }
@@ -93,12 +99,15 @@
     .sheet-content[data-side="right"][data-closed] {
         animation: sheet-slide-out-right 160ms ease-in forwards;
     }
+
     .sheet-content[data-side="left"][data-closed] {
         animation: sheet-slide-out-left 160ms ease-in forwards;
     }
+
     .sheet-content[data-side="top"][data-closed] {
         animation: sheet-slide-out-top 160ms ease-in forwards;
     }
+
     .sheet-content[data-side="bottom"][data-closed] {
         animation: sheet-slide-out-bottom 160ms ease-in forwards;
     }
@@ -107,14 +116,17 @@
         from {
             opacity: 0;
         }
+
         to {
             opacity: 1;
         }
     }
+
     @keyframes sheet-fade-out {
         from {
             opacity: 1;
         }
+
         to {
             opacity: 0;
         }
@@ -125,76 +137,91 @@
             transform: translate3d(8%, 0, 0);
             opacity: 0;
         }
+
         to {
             transform: translate3d(0, 0, 0);
             opacity: 1;
         }
     }
+
     @keyframes sheet-slide-out-right {
         from {
             transform: translate3d(0, 0, 0);
             opacity: 1;
         }
+
         to {
             transform: translate3d(8%, 0, 0);
             opacity: 0;
         }
     }
+
     @keyframes sheet-slide-in-left {
         from {
             transform: translate3d(-8%, 0, 0);
             opacity: 0;
         }
+
         to {
             transform: translate3d(0, 0, 0);
             opacity: 1;
         }
     }
+
     @keyframes sheet-slide-out-left {
         from {
             transform: translate3d(0, 0, 0);
             opacity: 1;
         }
+
         to {
             transform: translate3d(-8%, 0, 0);
             opacity: 0;
         }
     }
+
     @keyframes sheet-slide-in-top {
         from {
             transform: translate3d(0, -8%, 0);
             opacity: 0;
         }
+
         to {
             transform: translate3d(0, 0, 0);
             opacity: 1;
         }
     }
+
     @keyframes sheet-slide-out-top {
         from {
             transform: translate3d(0, 0, 0);
             opacity: 1;
         }
+
         to {
             transform: translate3d(0, -8%, 0);
             opacity: 0;
         }
     }
+
     @keyframes sheet-slide-in-bottom {
         from {
             transform: translate3d(0, 8%, 0);
             opacity: 0;
         }
+
         to {
             transform: translate3d(0, 0, 0);
             opacity: 1;
         }
     }
+
     @keyframes sheet-slide-out-bottom {
         from {
             transform: translate3d(0, 0, 0);
             opacity: 1;
         }
+
         to {
             transform: translate3d(0, 8%, 0);
             opacity: 0;
@@ -238,8 +265,7 @@
 
 @font-face {
     font-family: "Inter";
-    src: url("/fonts/Inter-Italic-VariableFont_opsz,wght.ttf")
-        format("truetype-variations");
+    src: url("/fonts/Inter-Italic-VariableFont_opsz,wght.ttf") format("truetype-variations");
     font-style: italic;
     font-weight: 100 900;
 }

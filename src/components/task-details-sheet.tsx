@@ -23,6 +23,7 @@ import {
 } from "@components/ui/sheet";
 import { cn } from "@/libs/cn";
 import TagPicker from "@components/tags/tag-picker";
+import { RichEditor } from "./tiptap-editor";
 
 type PriorityUiProps = {
   sheetBorderClass: string;
@@ -75,7 +76,9 @@ export default function TaskDetailsSheet(
   const [editingTags, setEditingTags] = createSignal(false);
   const [title, setTitle] = createSignal<string>(props.task?.header ?? "");
   const [desc, setDesc] = createSignal<string>(props.task?.description ?? "");
-  const [priority, setPriority] = createSignal<Option<Priority>>(props.task?.priority);
+  const [priority, setPriority] = createSignal<Option<Priority>>(
+    props.task?.priority,
+  );
   const [dueStr, setDueStr] = createSignal<string>(
     toLocalDateInputString(props.task?.dueDate) ?? "",
   );
@@ -130,7 +133,7 @@ export default function TaskDetailsSheet(
       <SheetContent
         side="right"
         class={cn(
-          "bg-black/50 backdrop-blur-xl p-5 border",
+          "bg-black/50 backdrop-blur-xl p-5 border w-full",
           priorityUi().sheetBorderClass,
         )}
       >
@@ -184,7 +187,8 @@ export default function TaskDetailsSheet(
                 <SelectTrigger class="min-w-[120px] bg-transparent text-xs text-zinc-300">
                   <span class="opacity-80">
                     {priority()
-                      ? priority()!.charAt(0).toUpperCase() + priority()!.slice(1)
+                      ? priority()!.charAt(0).toUpperCase() +
+                        priority()!.slice(1)
                       : "Priority"}
                   </span>
                 </SelectTrigger>
@@ -246,16 +250,9 @@ export default function TaskDetailsSheet(
           </div>
           {/* Divider line below tags */}
           <div class="border-t border-white/10" />
-          <textarea
-            class="w-full bg-transparent text-base sm:text-lg text-zinc-300 placeholder-zinc-600 outline-none leading-relaxed resize-none"
-            rows={8}
-            placeholder="Write details..."
-            value={desc()}
-            onInput={(e) => {
-              setDesc(e.currentTarget.value);
-              debounceUpdate({ description: e.currentTarget.value });
-            }}
-          />
+          <div class="w-full">
+            <RichEditor />
+          </div>
         </div>
       </SheetContent>
     </Sheet>

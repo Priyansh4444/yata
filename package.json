@@ -18,10 +18,18 @@
     "@tailwindcss/vite": "^4.1.12",
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-log": "~2.6.0",
-    "@tauri-apps/plugin-opener": "^2.4.0",
+    "@tauri-apps/plugin-opener": "^2.5.0",
+    "@tiptap/core": "^3.3.0",
+    "@tiptap/extension-code-block-lowlight": "^3.3.0",
+    "@tiptap/extension-mathematics": "^3.3.0",
+    "@tiptap/extension-youtube": "^3.3.0",
+    "@tiptap/pm": "^3.3.0",
+    "@tiptap/starter-kit": "^3.3.0",
     "animejs": "^4.1.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "katex": "^0.16.22",
+    "lowlight": "^3.3.0",
     "solid-js": "^1.9.9",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.12",
@@ -29,7 +37,8 @@
     "vite": "^7.1.3"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.8.1",
+    "@tailwindcss/typography": "^0.5.16",
+    "@tauri-apps/cli": "^2.8.2",
     "typescript": "~5.6.3",
     "vite-plugin-solid": "^2.11.8"
   }

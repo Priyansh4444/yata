@@ -57,6 +57,7 @@ export const SheetContent = <T extends ValidComponent = "div">(
         class={cn(
           sheetVariants({ side: local.side, class: local.class }),
           "sheet-content",
+          "overflow-y-auto h-full scrollbar-black"
         )}
         data-side={local.side}
         {...rest}
