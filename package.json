@@ -21,7 +21,6 @@
     "@tauri-apps/plugin-opener": "^2.5.0",
     "@tiptap/core": "^3.3.0",
     "@tiptap/extension-code-block-lowlight": "^3.3.0",
-    "@tiptap/extension-mathematics": "^3.3.0",
     "@tiptap/extension-youtube": "^3.3.0",
     "@tiptap/pm": "^3.3.0",
     "@tiptap/starter-kit": "^3.3.0",

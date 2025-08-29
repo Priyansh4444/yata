@@ -1,10 +1,8 @@
 import { Editor, FocusPosition } from "@tiptap/core";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import Mathematics, { migrateMathStrings } from "@tiptap/extension-mathematics";
 import Youtube from "@tiptap/extension-youtube";
 import StarterKit from "@tiptap/starter-kit";
 import { lowlight } from "./lowlight-config";
-import { ReplaceStep, Step } from "@tiptap/pm/transform";
 
 // Editor configuration interface
 export interface EditorConfig {
@@ -54,12 +52,54 @@ export const proseCSSVariables = `
 
 `;
 
-// Match $...$ that are NOT part of $$...$$ (protect block delimiters)
-// - Start $ is not preceded by $
-// - Start $ is not immediately followed by $
-// - End $ is not preceded by $
-// - End $ is not immediately followed by $
-const INLINE_MATH_SAFE_REGEX = /(?<!\$)\$(?!\$)([\s\S]*?)(?<!\$)\$(?!\$)/g;
+const YOUTUBE_URL_REGEX =
+  /(https?:\/\/(?:www\.|m\.)?youtu(?:\.be|be\.com)\/(?:watch\?v=|embed\/|shorts\/)?([\w-]{11}))(?:[&#?].*)?/gi;
+
+/**
+ * Function to convert YouTube URLs to embeds in the editor
+ */
+function convertYouTubeUrls(editor: Editor) {
+  const doc = editor.state.doc;
+  const tr = editor.state.tr;
+  let hasChanges = false;
+
+  // Traverse the document to find text nodes with YouTube URLs
+  doc.descendants((node, pos) => {
+    if (node.isText && node.text) {
+      const text = node.text;
+      const matches = Array.from(text.matchAll(YOUTUBE_URL_REGEX));
+
+      if (matches.length > 0) {
+        // Process matches in reverse order to maintain correct positions
+        matches.reverse().forEach((match) => {
+          if (match.index !== undefined) {
+            const matchStart = pos + match.index;
+            const matchEnd = matchStart + match[0].length;
+
+            // Delete the URL text
+            tr.delete(matchStart, matchEnd);
+
+            // Insert YouTube embed at the same position
+            tr.insert(
+              matchStart,
+              editor.schema.nodes.youtube.create({
+                src: match[1],
+                width: 640,
+                height: 360,
+              }),
+            );
+
+            hasChanges = true;
+          }
+        });
+      }
+    }
+  });
+
+  if (hasChanges) {
+    editor.view.dispatch(tr);
+  }
+}
 
 // Create editor function
 export function createEditor(config: EditorConfig): Editor {
@@ -79,17 +119,22 @@ export function createEditor(config: EditorConfig): Editor {
           spellcheck: "false",
         },
       }),
-      Mathematics.configure({
-        katexOptions: { displayMode: false, macros: { "\\RR": "\\mathbb{R}" } },
-      }),
+
       Youtube.configure({
         width: 640,
         height: 360,
         controls: true,
         nocookie: true,
+        HTMLAttributes: {
+          // lazy load YouTube iframes
+          loading: "lazy",
+        },
         allowFullscreen: true,
         autoplay: false,
         modestBranding: true,
+        ccLoadPolicy: true,
+        inline: true,
+        addPasteHandler: true,
       }),
     ],
     editorProps: {
@@ -98,33 +143,11 @@ export function createEditor(config: EditorConfig): Editor {
           "prose w-full prose-sm sm:prose-base lg:prose-lg xl:prose-2xl m-5 focus:outline-none",
         style: proseCSSVariables,
       },
-      handlePaste(view, event) {
-        const text = event.clipboardData?.getData("text/plain")?.trim();
-        if (!text) return false;
-
-        // Try YouTube embed on paste
-        const ytRegex =
-          /^(https?:\/\/(?:www\.|m\.)?youtu(?:\.be|be\.com)\/(?:watch\?v=|embed\/|shorts\/)?([\w-]{11}))(?:[&#?].*)?$/i;
-        const match = text.match(ytRegex);
-        if (match) {
-          event.preventDefault();
-          createdEditor.commands.setYoutubeVideo({
-            src: match[1],
-            width: 640,
-            height: 360,
-          });
-          return true;
-        }
-      },
-    },
-    onUpdate: ({ editor: currentEditor }) => {
-      // Convert newly typed inline $...$ safely (ignore $$...$$)
-      migrateMathStrings(currentEditor, INLINE_MATH_SAFE_REGEX);
     },
     onCreate: ({ editor: currentEditor }) => {
-      // Migrate initial content inline math without touching $$ blocks
-      migrateMathStrings(currentEditor, INLINE_MATH_SAFE_REGEX);
-      console.log("created");
+      convertYouTubeUrls(currentEditor);
+    },
+    onUpdate: ({ editor: currentEditor }) => {
     },
     content: config.content || "",
     autofocus: (config.autofocus as FocusPosition | undefined) || "end",
@@ -165,3 +188,39 @@ fizzBuzz();</code></pre>
 
 <p>Try typing inline math with <code>$...$</code> or block math with <code>$$...$$</code>.</p>
 `;
+
+// Mathematics.configure({
+//   katexOptions: { displayMode: false, macros: { "\\RR": "\\mathbb{R}" } },
+//   blockOptions: {
+//     onClick: (node, pos) => {
+//       const newCalculation = prompt(
+//         "Enter new calculation:",
+//         node.attrs.latex,
+//       );
+//       if (newCalculation) {
+//         createdEditor
+//           .chain()
+//           .setNodeSelection(pos)
+//           .updateBlockMath({ latex: newCalculation })
+//           .focus()
+//           .run();
+//       }
+//     },
+//   },
+//   inlineOptions: {
+//     onClick: (node, pos) => {
+//       const newCalculation = prompt(
+//         "Enter new calculation:",
+//         node.attrs.latex,
+//       );
+//       if (newCalculation) {
+//         createdEditor
+//           .chain()
+//           .setNodeSelection(pos)
+//           .updateInlineMath({ latex: newCalculation })
+//           .focus()
+//           .run();
+//       }
+//     },
+//   },
+// }),

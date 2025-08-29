@@ -14,7 +14,7 @@ import { createTask } from "@/utils";
 import InlineListTitle from "@/components/task-list/task-list.title-edit";
 import TaskDetailsSheet from "@components/task-details-sheet";
 import { createUndoRedo } from "@/libs/undo";
-import useRerenderLogger from "@/utils/check-re-render";
+// import useRerenderLogger from "@/utils/check-re-render";
 export default function KanbanList({
   taskList,
   onRenameList,
@@ -30,9 +30,9 @@ export default function KanbanList({
   const [sheetOpen, setSheetOpen] = createSignal<boolean>(false);
   const history = createUndoRedo<Task[]>({ limit: 100 });
 
-  useRerenderLogger(() => taskList.tasks, "KanbanList tasks");
-  useRerenderLogger(openTaskIndex, "OpenTaskIndex");
-  useRerenderLogger(sheetOpen, "SheetOpen");
+  // useRerenderLogger(() => taskList.tasks, "KanbanList tasks");
+  // useRerenderLogger(openTaskIndex, "OpenTaskIndex");
+  // useRerenderLogger(sheetOpen, "SheetOpen");
   const hasDraft = createMemo(() => tasks.some((t) => t.isDraft));
 
   const openTask = createMemo(() => {

@@ -13,7 +13,6 @@
         "@tauri-apps/plugin-opener": "^2.5.0",
         "@tiptap/core": "^3.3.0",
         "@tiptap/extension-code-block-lowlight": "^3.3.0",
-        "@tiptap/extension-mathematics": "^3.3.0",
         "@tiptap/extension-youtube": "^3.3.0",
         "@tiptap/pm": "^3.3.0",
         "@tiptap/starter-kit": "^3.3.0",
@@ -328,8 +327,6 @@
     "@tiptap/extension-list-item": ["@tiptap/extension-list-item@3.3.0", "", { "peerDependencies": { "@tiptap/extension-list": "^3.3.0" } }, "sha512-l00wnnMq9iPcXwYaIiFGBznGyD6kxkC3fsonxF3p3QVBRgL1PxHHIIUxxNpkaEu7vB7qIpzI+ypspDmVDh1ZeA=="],
 
     "@tiptap/extension-list-keymap": ["@tiptap/extension-list-keymap@3.3.0", "", { "peerDependencies": { "@tiptap/extension-list": "^3.3.0" } }, "sha512-xXdQJxF6kQXzdPXUiseflIuwTQGVh6REQ3Uq66mr1zBia8DPVAzwV0cpJoEh1TCFeGtbShb23nuWZXa+7J36Xg=="],
-
-    "@tiptap/extension-mathematics": ["@tiptap/extension-mathematics@3.3.0", "", { "peerDependencies": { "@tiptap/core": "^3.3.0", "@tiptap/pm": "^3.3.0", "katex": "^0.16.4" } }, "sha512-IxY3coJPCl/5yU8/Y9D+8nKPwDO9Q0s4lKAs2CUPGa/NhhGyjOlMg8/oujuACIYNf13LDirZfP/hBGpKF822Qg=="],
 
     "@tiptap/extension-ordered-list": ["@tiptap/extension-ordered-list@3.3.0", "", { "peerDependencies": { "@tiptap/extension-list": "^3.3.0" } }, "sha512-zBw3zl/3bhOmNNVAbXVnpGug0gxNCYqJ8nyMCmX16dFK9JR+WIUaX8RHBDuCLQ0PJidfGQMdm/Uf/Vc8RCaHzg=="],
 

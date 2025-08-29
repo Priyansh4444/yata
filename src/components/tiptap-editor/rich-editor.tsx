@@ -1,6 +1,7 @@
 import { onMount } from "solid-js";
 import { createEditor, defaultContent } from "./editor-config";
 import "./editor-styles.css";
+import katex from "katex";
 import "katex/dist/katex.min.css";
 
 export default function RichEditor() {
@@ -10,7 +11,7 @@ export default function RichEditor() {
       createEditor({
         element: editorElement,
         content: defaultContent,
-        autofocus: "end",
+        autofocus: "start",
       });
     }
   });
