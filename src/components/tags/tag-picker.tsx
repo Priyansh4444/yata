@@ -1,7 +1,6 @@
 import { For, Show, createMemo } from "solid-js";
 import { createStore } from "solid-js/store";
 import type { HexColor, Tag } from "@/types";
-import TagBadge from "./tag-badge";
 
 type Props = {
   value: Tag[];

@@ -19,3 +19,10 @@
   - This includes not being able to undo/redo without the dots changing for lists
   - The toggle state not being included in the history
   - It opening the task-card.editor when undoing/redoing
+
+
+## Nice-to-haves
+- Having a "focus mode" which hides all the other tasks except the one you're working on
+- Having a progress bar for each task based on the TODOs in a Task itself
+- Making the codeblocks have a "copy to clipboard" button and header which you can either give a description to or it just says the language
+- Drag Handle though I do not see myself using it that much

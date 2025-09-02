@@ -2,7 +2,12 @@ import { Editor, FocusPosition } from "@tiptap/core";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import Youtube from "@tiptap/extension-youtube";
 import StarterKit from "@tiptap/starter-kit";
+// Tasks: node extensions for task lists/items
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+// Drag handle for block-level reordering UX
 import { lowlight } from "./lowlight-config";
+import CustomKatexExtension from "./custom-katex-extension";
 
 // Editor configuration interface
 export interface EditorConfig {
@@ -33,16 +38,8 @@ export const proseCSSVariables = `
   --tw-prose-th-borders: #404040;
   --tw-prose-td-borders: #404040;
 
-  /* Compact font sizes and spacing */
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-
-  /* Override default prose sizes for smaller text */
-  --tw-prose-sm: 0.875rem;
-  --tw-prose-base: 1rem;
-  --tw-prose-lg: 1.125rem;
-  --tw-prose-xl: 1.25rem;
-  --tw-prose-2xl: 1.5rem;
+  /* Zoom out the editor content for a more compact look */
+  zoom: 0.8;
 
   /* Reduce margins for all elements */
   --tw-space-y-reverse: 0;
@@ -119,7 +116,7 @@ export function createEditor(config: EditorConfig): Editor {
           spellcheck: "false",
         },
       }),
-
+      // Enable embedding YouTube links
       Youtube.configure({
         width: 640,
         height: 360,
@@ -136,6 +133,14 @@ export function createEditor(config: EditorConfig): Editor {
         inline: true,
         addPasteHandler: true,
       }),
+      // Math rendering with click-to-edit UX (see extension)
+      CustomKatexExtension,
+      // Tasks: list container and items
+      TaskList,
+      TaskItem.configure({
+        // Allow nested task items for richer lists
+        nested: true,
+      }),
     ],
     editorProps: {
       attributes: {
@@ -147,10 +152,9 @@ export function createEditor(config: EditorConfig): Editor {
     onCreate: ({ editor: currentEditor }) => {
       convertYouTubeUrls(currentEditor);
     },
-    onUpdate: ({ editor: currentEditor }) => {
-    },
+    onUpdate: () => {},
     content: config.content || "",
-    autofocus: (config.autofocus as FocusPosition | undefined) || "end",
+    autofocus: (config.autofocus as FocusPosition) || "end",
   });
 
   return createdEditor;
@@ -162,6 +166,7 @@ export const defaultContent = `
 <h2>YouTube</h2>
 <p>Paste a YouTube URL to embed automatically:</p>
 <p>https://www.youtube.com/watch?v=dQw4w9WgXcQ</p>
+// https://chatgpt.com
 
 <h2>Math</h2>
 <p>Inline: $E=mc^2$ and $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$</p>
@@ -186,41 +191,14 @@ fizzBuzz();</code></pre>
 
 <p>Try typing <code>\`\`\`javascript</code> followed by your code to create syntax-highlighted code blocks!</p>
 
-<p>Try typing inline math with <code>$...$</code> or block math with <code>$$...$$</code>.</p>
-`;
+<p>Try typing inline math with <code>$...$</code> or block math with.</p>
 
-// Mathematics.configure({
-//   katexOptions: { displayMode: false, macros: { "\\RR": "\\mathbb{R}" } },
-//   blockOptions: {
-//     onClick: (node, pos) => {
-//       const newCalculation = prompt(
-//         "Enter new calculation:",
-//         node.attrs.latex,
-//       );
-//       if (newCalculation) {
-//         createdEditor
-//           .chain()
-//           .setNodeSelection(pos)
-//           .updateBlockMath({ latex: newCalculation })
-//           .focus()
-//           .run();
-//       }
-//     },
-//   },
-//   inlineOptions: {
-//     onClick: (node, pos) => {
-//       const newCalculation = prompt(
-//         "Enter new calculation:",
-//         node.attrs.latex,
-//       );
-//       if (newCalculation) {
-//         createdEditor
-//           .chain()
-//           .setNodeSelection(pos)
-//           .updateInlineMath({ latex: newCalculation })
-//           .focus()
-//           .run();
-//       }
-//     },
-//   },
-// }),
+<h2>Tasks</h2>
+<p>Use <strong>Cmd/Ctrl+Shift+9</strong> to create task lists. Click a checkbox to toggle.</p>
+<ul data-type="taskList">
+  <li data-type="taskItem" data-checked="false"><p>Click the drag handle to reorder tasks</p></li>
+  <li data-type="taskItem" data-checked="true"><p>Completed items are dimmed and struck through</p></li>
+  <li data-type="taskItem" data-checked="false"><p>Math like $E=mc^2$ renders; click math to edit raw</p></li>
+  <li data-type="taskItem" data-checked="false"><p>Click out of math to re-render</p></li>
+</ul>
+`;

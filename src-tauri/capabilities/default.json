@@ -3,10 +3,12 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "chatgpt-mini"
   ],
   "permissions": [
     "core:default",
+    "core:webview:allow-create-webview-window",
     "opener:default",
     "log:default"
   ]

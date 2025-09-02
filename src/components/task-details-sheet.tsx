@@ -252,6 +252,7 @@ export default function TaskDetailsSheet(
           <div class="border-t border-white/10" />
           <div class="w-full">
             <RichEditor />
+            {desc()}
           </div>
         </div>
       </SheetContent>
