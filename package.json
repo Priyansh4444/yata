@@ -20,6 +20,7 @@
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-log": "~2.6.0",
     "@tauri-apps/plugin-opener": "^2.5.0",
+    "@thisbeyond/solid-dnd": "^0.7.5",
     "@tiptap/core": "^3.4.1",
     "@tiptap/extension-code-block-lowlight": "^3.4.1",
     "@tiptap/extension-list": "^3.4.1",
