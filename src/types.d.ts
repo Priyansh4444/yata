@@ -22,6 +22,7 @@ export type Task = {
 };
 
 export type TaskList = {
+  id: string;
   header: string;
   tasks: Task[];
 };

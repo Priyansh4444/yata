@@ -5,8 +5,23 @@ import { createStore, reconcile, unwrap } from "solid-js/store";
 import { createTaskList } from "@/utils";
 import NewListCard from "@/components/task-list/task-list.create";
 import { createUndoRedo } from "@/libs/undo";
+import {
+  DragDropProvider,
+  DragDropSensors,
+  SortableProvider,
+  DragOverlay,
+  closestCenter,
+  type DragEventHandler,
+  type Draggable,
+  type Droppable,
+  type CollisionDetector,
+} from "@thisbeyond/solid-dnd";
 
-export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
+interface KanbanBoardProps {
+  taskLists: TaskList[];
+}
+
+export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
   const [lists, setLists] = createStore<TaskList[]>(taskLists);
   const [isAdding, setIsAdding] = createSignal<boolean>(false);
   const [newListName, setNewListName] = createSignal<string>("");
@@ -29,12 +44,10 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
   }
 
   function renameListAt(index: number, newHeader: string) {
-    setLists(index, (taskList) => {
-      return {
-        ...taskList,
-        header: newHeader.trim(),
-      };
-    });
+    setLists(index, (taskList) => ({
+      ...taskList,
+      header: newHeader.trim(),
+    }));
   }
 
   function deleteListAt(index: number) {
@@ -56,41 +69,236 @@ export default function KanbanBoard({ taskLists }: { taskLists: TaskList[] }) {
   function handleKeydown(e: KeyboardEvent) {
     const isCtrl = e.ctrlKey || e.metaKey;
     if (!isCtrl) return;
+
     if (e.key.toLowerCase() === "z") {
       e.preventDefault();
       const prev = history.undo(
-        (lists as unknown as TaskList[]).map((l) => ({
-          header: l.header,
-          tasks: l.tasks,
+        lists.map((list) => ({
+          id: list.id,
+          header: list.header,
+          tasks: list.tasks,
         })),
       );
-      if (prev) setLists(prev as TaskList[]);
+      if (prev) setLists(prev);
     } else if (e.key.toLowerCase() === "y") {
       e.preventDefault();
       const next = history.redo(
-        (lists as unknown as TaskList[]).map((l) => ({
-          header: l.header,
-          tasks: l.tasks,
+        lists.map((list) => ({
+          id: list.id,
+          header: list.header,
+          tasks: list.tasks,
         })),
       );
-      if (next) setLists(next as TaskList[]);
+      if (next) setLists(next);
     }
   }
 
   onMount(() => window.addEventListener("keydown", handleKeydown));
   onCleanup(() => window.removeEventListener("keydown", handleKeydown));
 
+  function groupIds(): string[] {
+    return lists.map((list) => list.id);
+  }
+
+  function groupItemIds(listId: string): string[] {
+    const list = lists.find((list) => list.id === listId)!;
+    return list.tasks.map((task) => task.id) ?? [];
+  }
+
+  function isSortableGroup(x: Draggable | Droppable): boolean {
+    return x?.data?.type === "group";
+  }
+
+  const closestEntity: CollisionDetector = (draggable, droppables, context) => {
+    const closestGroup = closestCenter(
+      draggable,
+      droppables.filter(isSortableGroup),
+      context,
+    );
+    if (isSortableGroup(draggable)) return closestGroup;
+
+    if (closestGroup) {
+      const listId = String(closestGroup.id);
+      const closestItem = closestCenter(
+        draggable,
+        droppables.filter(
+          (droppable) => !isSortableGroup(droppable) && droppable.data?.group === listId,
+        ),
+        context,
+      );
+
+      if (!closestItem) return closestGroup;
+
+      const changingGroup = draggable.data?.group !== listId;
+      if (changingGroup) {
+        const ids = groupItemIds(listId);
+        const lastId = ids.length > 0 ? ids[ids.length - 1] : undefined;
+        const belowLastItem =
+          lastId === String(closestItem.id) &&
+          draggable.transformed.center.y > closestItem.transformed.center.y;
+        if (belowLastItem) return closestGroup;
+      }
+
+      return closestItem;
+    }
+    return null;
+  };
+
+  function reorderGroups(draggableId: string, droppableId: string) {
+    if (draggableId === droppableId) return;
+
+    const fromIndex = lists.findIndex((list) => list.id === draggableId);
+    const toIndex = lists.findIndex((list) => list.id === droppableId);
+
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+
+    snapshotBoard();
+    const base = unwrap(lists);
+    const next = base.map((list) => ({
+      id: list.id,
+      header: list.header,
+      tasks: list.tasks.slice(),
+    }));
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    setLists(reconcile(next));
+  }
+
+  function moveItem(
+    draggableId: string,
+    droppable: Droppable,
+    onlyWhenChangingGroup = true,
+  ) {
+    const from = (() => {
+      for (let groupIndexIter = 0; groupIndexIter < lists.length; groupIndexIter++) {
+        const idx = lists[groupIndexIter].tasks.findIndex((task) => task.id === draggableId);
+        if (idx !== -1) return { groupIndex: groupIndexIter, itemIndex: idx };
+      }
+      return undefined;
+    })();
+
+    if (!from) return;
+
+    const droppableIsGroup = isSortableGroup(droppable);
+    const targetGroupId = droppableIsGroup
+      ? String(droppable.id)
+      : String(droppable.data?.group);
+    const targetGroupIndex = lists.findIndex(
+      (list) => list.id === targetGroupId,
+    );
+
+    if (onlyWhenChangingGroup && from.groupIndex === targetGroupIndex) return;
+
+    let targetIndex: number;
+    if (droppableIsGroup) {
+      targetIndex = lists[targetGroupIndex]?.tasks.length ?? 0;
+    } else {
+      const ids = groupItemIds(targetGroupId);
+      const toIndex = ids.indexOf(String(droppable.id));
+      const existingIndexInTarget = ids.indexOf(draggableId);
+      if (toIndex === -1) return;
+      targetIndex =
+        existingIndexInTarget === -1 || existingIndexInTarget > toIndex
+          ? toIndex
+          : toIndex + 1;
+    }
+
+    if (from.groupIndex === targetGroupIndex && from.itemIndex === targetIndex)
+      return;
+
+    snapshotBoard();
+    const next = unwrap(lists).map((list) => ({
+      id: list.id,
+      header: list.header,
+      tasks: list.tasks.slice(),
+    }));
+    const [moved] = next[from.groupIndex].tasks.splice(from.itemIndex, 1);
+    const adjustedIndex =
+      from.groupIndex === targetGroupIndex && from.itemIndex < targetIndex
+        ? Math.max(0, targetIndex - 1)
+        : targetIndex;
+    next[targetGroupIndex].tasks.splice(adjustedIndex, 0, moved);
+    setLists(reconcile(next));
+  }
+
+  const onDragOver: DragEventHandler = ({ draggable, droppable }) => {
+    if (!draggable || !droppable) return;
+    if (isSortableGroup(draggable)) return; // don't reorder groups on hover
+    moveItem(String(draggable.id), droppable, true);
+  };
+
+  const onDragEnd: DragEventHandler = ({ draggable, droppable }) => {
+    if (!draggable || !droppable) return;
+
+    if (isSortableGroup(draggable) && isSortableGroup(droppable)) {
+      reorderGroups(String(draggable.id), String(droppable.id));
+      return;
+    }
+
+    if (!isSortableGroup(draggable)) {
+      moveItem(String(draggable.id), droppable, false);
+    }
+  };
+
+  function findTaskById(id: string) {
+    for (let groupIndex = 0; groupIndex < lists.length; groupIndex++) {
+      const tasks = lists[groupIndex].tasks;
+      const ii = tasks.findIndex((task) => task.id === id);
+      if (ii !== -1) {
+        return { groupIndex, ii, task: tasks[ii] };
+      }
+    }
+    return undefined;
+  }
+
   return (
     <div class="kanban-board h-full flex flex-row gap-6 overflow-x-auto pb-4 scrollbar-black">
-      <For each={lists}>
-        {(list, i) => (
-          <KanbanList
-            taskList={list}
-            onRenameList={(name) => renameListAt(i(), name)}
-            onDeleteList={() => deleteListAt(i())}
-          />
-        )}
-      </For>
+      <DragDropProvider
+        onDragOver={onDragOver}
+        onDragEnd={onDragEnd}
+        collisionDetector={closestEntity}
+      >
+        <DragDropSensors />
+        <SortableProvider ids={groupIds()}>
+          <For each={lists}>
+            {(list, i) => (
+              <KanbanList
+                taskList={list}
+                onRenameList={(name) => renameListAt(i(), name)}
+                onDeleteList={() => deleteListAt(i())}
+                listId={list.id}
+              />
+            )}
+          </For>
+        </SortableProvider>
+
+        <DragOverlay>
+          {(draggable) => {
+            if (!draggable) return null;
+
+            if (isSortableGroup(draggable)) {
+              const listId = String(draggable.id);
+              const list = lists.find((list) => list.id === listId);
+              return (
+                <div class="rounded-2xl px-4 py-3 bg-black/40 border border-white/10 text-zinc-200">
+                  {list?.header ?? "List"}
+                </div>
+              );
+            }
+
+            const id = String(draggable.id);
+            const taskLocation = findTaskById(id);
+
+            if (!taskLocation) return null;
+
+            return (
+              <div class="rounded-xl px-4 py-2 bg-black/60 border border-white/10 text-zinc-200 max-w-[360px]">
+                {taskLocation.task.header?.trim() || "Untitled Task"}
+              </div>
+            );
+          }}
+        </DragOverlay>
+      </DragDropProvider>
 
       <section class="column flex flex-col h-full rounded-2xl min-w-[320px] w-[360px] max-w-[400px]">
         <Show

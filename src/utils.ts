@@ -37,6 +37,7 @@ function createTask(
 
 function createTaskList(name: string, tasks: Task[]): TaskList {
   return {
+    id: generateUID(),
     header: name,
     tasks: tasks,
   };

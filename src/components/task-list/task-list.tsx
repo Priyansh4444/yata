@@ -5,34 +5,42 @@ import {
   createSignal,
   onCleanup,
   onMount,
+  createEffect,
+  JSX,
 } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
-import { Task, TaskList, Tag } from "@/types";
+import type { Task, TaskList, Tag } from "@/types";
 import TaskCard from "@/components/task-card/task-card";
 import InlineTaskEditor from "@/components/task-card/task-card.editor";
 import { createTask } from "@/utils";
 import InlineListTitle from "@/components/task-list/task-list.title-edit";
 import TaskDetailsSheet from "@components/task-details-sheet";
 import { createUndoRedo } from "@/libs/undo";
-// import useRerenderLogger from "@/utils/check-re-render";
+import {
+  SortableProvider,
+  createSortable,
+  maybeTransformStyle,
+  type Id,
+} from "@thisbeyond/solid-dnd";
+
+interface KanbanListProps {
+  taskList: TaskList;
+  onRenameList: (name: string) => void;
+  onDeleteList: () => void;
+  listId: string;
+}
+
 export default function KanbanList({
   taskList,
   onRenameList,
   onDeleteList,
-}: {
-  taskList: TaskList;
-  onRenameList: (name: string) => void;
-  onDeleteList: () => void;
-}) {
-  // Creating a store of a store for deeper fine-grained reactivity
+  listId,
+}: KanbanListProps) {
   const [tasks, setTasks] = createStore<Task[]>(taskList.tasks);
   const [openTaskIndex, setOpenTaskIndex] = createSignal<number | null>(null);
   const [sheetOpen, setSheetOpen] = createSignal<boolean>(false);
   const history = createUndoRedo<Task[]>({ limit: 100 });
 
-  // useRerenderLogger(() => taskList.tasks, "KanbanList tasks");
-  // useRerenderLogger(openTaskIndex, "OpenTaskIndex");
-  // useRerenderLogger(sheetOpen, "SheetOpen");
   const hasDraft = createMemo(() => tasks.some((t) => t.isDraft));
 
   const openTask = createMemo(() => {
@@ -56,9 +64,9 @@ export default function KanbanList({
   }
 
   function snapshot() {
-    // Solid store arrays are proxies; convert to plain objects for cloning
-    const plain = tasks.map((t) => ({ ...t }));
-    history.push(plain as Task[]);
+    // Convert Solid store arrays to plain objects for cloning
+    const plain = tasks.map((task) => ({ ...task }));
+    history.push(plain);
   }
 
   function startAddNew() {
@@ -78,6 +86,7 @@ export default function KanbanList({
   function handleCancel(index: number) {
     const task = tasks[index];
     if (!task) return;
+
     if ((task.header ?? "").trim() === "") {
       snapshot();
       setTasks(tasks.filter((_, i) => i !== index));
@@ -86,9 +95,25 @@ export default function KanbanList({
     }
   }
 
+  function deleteTaskAt(index: number) {
+    snapshot();
+    const next = tasks.filter((_, i) => i !== index);
+    setTasks(reconcile(next));
+
+    // If the deleted task was open, close the sheet
+    if (openTaskIndex() === index) {
+      setOpenTaskIndex(null);
+      setSheetOpen(false);
+    } else if (openTaskIndex() !== null && openTaskIndex()! > index) {
+      // Adjust the open task index if a task before it was deleted
+      setOpenTaskIndex(openTaskIndex()! - 1);
+    }
+  }
+
   function updateOpenTask(updates: Partial<Task>) {
     const index = openTaskIndex();
     if (index === null) return;
+
     snapshot();
     Object.entries(updates).forEach(([key, value]) => {
       setTasks(index, key as keyof Task, value);
@@ -98,26 +123,37 @@ export default function KanbanList({
   function handleKeydown(e: KeyboardEvent) {
     const isCtrl = e.ctrlKey || e.metaKey;
     if (!isCtrl) return;
+
     if (e.key.toLowerCase() === "z") {
       e.preventDefault();
-      const prev = history.undo(tasks.map((t) => ({ ...t })) as Task[]);
-      if (prev) setTasks(reconcile(prev as Task[]));
+      const prev = history.undo(tasks.map((task) => ({ ...task })));
+      if (prev) setTasks(reconcile(prev));
     } else if (e.key.toLowerCase() === "y") {
       e.preventDefault();
-      const next = history.redo(tasks.map((t) => ({ ...t })) as Task[]);
-      if (next) setTasks(reconcile(next as Task[]));
+      const next = history.redo(tasks.map((task) => ({ ...task })));
+      if (next) setTasks(reconcile(next));
     }
   }
 
   onMount(() => {
     window.addEventListener("keydown", handleKeydown);
   });
+
   onCleanup(() => {
     window.removeEventListener("keydown", handleKeydown);
   });
 
+  createEffect(() => {
+    setTasks(reconcile(taskList.tasks));
+  });
+
+  const listSortable = createSortable(listId, { type: "group" });
+
   return (
     <section
+      ref={listSortable.ref}
+      style={maybeTransformStyle(listSortable.transform)}
+      classList={{ "opacity-25": listSortable.isActiveDraggable }}
       class="
         column relative flex flex-col h-full rounded-2xl
         bg-black/40 backdrop-blur-sm
@@ -134,6 +170,7 @@ export default function KanbanList({
           bg-black/20
           border-b border-white/5
         "
+        {...listSortable.dragActivators}
       >
         <div class="flex items-center gap-2">
           <span class="h-2 w-2 rounded-full bg-emerald-400/80 shadow-[0_0_8px_1px_rgba(16,185,129,0.5)]" />
@@ -193,34 +230,39 @@ export default function KanbanList({
               bg-black/20
             "
             >
-              No tasks yet. Drag here or click “Add task”.
+              No tasks yet. Drag here or click "Add task".
             </div>
           }
         >
-          <For each={tasks}>
-            {(task, i) => (
-              <>
-                {task.isDraft ? (
-                  <InlineTaskEditor
-                    initial={task}
-                    onSave={(u) => handleSave(i(), u)}
-                    onCancel={() => handleCancel(i())}
-                    existingTags={existingTags()}
-                  />
-                ) : (
-                  <TaskCard
-                    task={task}
-                    onOpen={() => {
-                      setOpenTaskIndex(i());
-                      setSheetOpen(true);
-                    }}
-                    onAddTags={() => startEditAt(i())}
-                    onStartEdit={() => startEditAt(i())}
-                  />
-                )}
-              </>
-            )}
-          </For>
+          <SortableProvider ids={tasks.map((t) => t.id)}>
+            <For each={tasks}>
+              {(task, i) => (
+                <>
+                  {task.isDraft ? (
+                    <InlineTaskEditor
+                      initial={task}
+                      onSave={(update) => handleSave(i(), update)}
+                      onCancel={() => handleCancel(i())}
+                      existingTags={existingTags()}
+                    />
+                  ) : (
+                    <SortableTaskCard id={task.id} group={listId}>
+                      <TaskCard
+                        task={task}
+                        onOpen={() => {
+                          setOpenTaskIndex(i());
+                          setSheetOpen(true);
+                        }}
+                        onAddTags={() => startEditAt(i())}
+                        onStartEdit={() => startEditAt(i())}
+                        onDelete={() => deleteTaskAt(i())}
+                      />
+                    </SortableTaskCard>
+                  )}
+                </>
+              )}
+            </For>
+          </SortableProvider>
         </Show>
       </div>
 
@@ -243,6 +285,7 @@ export default function KanbanList({
           + Add task
         </button>
       </div>
+
       <TaskDetailsSheet
         open={sheetOpen()}
         onOpenChange={(v) => {
@@ -251,8 +294,8 @@ export default function KanbanList({
             return;
           }
           setSheetOpen(false);
-          // ! Delay clearing the task until the closing animation finishes
-          // ! Keep this in sync with the CSS close animation duration (~160-200ms)
+          // Delay clearing the task until the closing animation finishes
+          // Keep this in sync with the CSS close animation duration (~160-200ms)
           setTimeout(() => setOpenTaskIndex(null), 200);
         }}
         task={openTask()}
@@ -261,5 +304,29 @@ export default function KanbanList({
         existingTags={existingTags()}
       />
     </section>
+  );
+}
+
+interface SortableTaskCardProps {
+  id: Id;
+  group: string;
+  children: JSX.Element;
+}
+
+function SortableTaskCard(props: SortableTaskCardProps) {
+  const sortable = createSortable(props.id, {
+    type: "item",
+    group: props.group,
+  });
+
+  return (
+    <div
+      ref={sortable.ref}
+      style={maybeTransformStyle(sortable.transform)}
+      {...sortable.dragActivators}
+      classList={{ "opacity-25": sortable.isActiveDraggable }}
+    >
+      {props.children}
+    </div>
   );
 }
