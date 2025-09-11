@@ -25,5 +25,4 @@
 - Having a "focus mode" which hides all the other tasks except the one you're working on
 - Having a progress bar for each task based on the TODOs in a Task itself
 - Making the codeblocks have a "copy to clipboard" button and header which you can either give a description to or it just says the language
-- Drag Handle though I do not see myself using it that much
 - Image pasting automatically making a file and then finding a prosemirror / tip tap extension to show the image

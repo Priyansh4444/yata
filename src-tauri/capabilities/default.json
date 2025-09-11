@@ -3,13 +3,28 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main",
-    "chatgpt-mini"
+    "main"
   ],
   "permissions": [
     "core:default",
     "core:webview:allow-create-webview-window",
     "opener:default",
-    "log:default"
+    "log:default",
+    "fs:default",
+    "fs:allow-exists",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-mkdir",
+    "fs:allow-rename",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-write-recursive",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "baseDir": "AppData", "path": "boards/**" }
+      ]
+    }
   ]
 }
