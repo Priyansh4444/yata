@@ -6,6 +6,7 @@ import { Route, Router } from "@solidjs/router";
 import SettingsPage from "@/pages/settings-page";
 import { generateRandomTaskLists } from "@/utils";
 import { Index } from "solid-js";
+import BenchmarkTest from "./BenchmarkTest";
 
 function App() {
   const routes = [
@@ -27,13 +28,15 @@ function App() {
 
 function HomePage() {
   return (
-    <main class="min-h-screen w-screen bg-background text-foreground px-6 py-6 flex flex-col pb-24">
-      <HeaderText />
-      <div class="flex flex-col h-[85vh] py-4 overflow-x-auto">
-        <KanbanBoard taskLists={generateRandomTaskLists(3)} />
-      </div>
-      <BottomDock />
-    </main>
+    // <main class="min-h-screen w-screen bg-background text-foreground px-6 py-6 flex flex-col pb-24">
+    //   <HeaderText />
+    //   <div class="flex flex-col h-[85vh] py-4 overflow-x-auto">
+    //     <KanbanBoard taskLists={generateRandomTaskLists(3)} />
+    //   </div>
+    //   <BottomDock />
+    // </main>
+    // 
+    <BenchmarkTest />
   );
 }
 
