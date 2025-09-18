@@ -23,7 +23,7 @@ import {
 } from "@components/ui/sheet";
 import { cn } from "@/libs/cn";
 import TagPicker from "@components/tags/tag-picker";
-import { RichEditor } from "./tiptap-editor";
+import RichEditor from "./tiptap-editor/rich-editor";
 
 type PriorityUiProps = {
   sheetBorderClass: string;
@@ -75,7 +75,7 @@ export default function TaskDetailsSheet(
   const priorityUi = createMemo(() => getPriorityUiProps(props.task?.priority));
   const [editingTags, setEditingTags] = createSignal(false);
   const [title, setTitle] = createSignal<string>(props.task?.header ?? "");
-  const [desc, setDesc] = createSignal<string>(props.task?.description ?? "");
+  const [content, setContent] = createSignal<string>(props.task?.content ?? "");
   const [priority, setPriority] = createSignal<Option<Priority>>(
     props.task?.priority,
   );
@@ -89,7 +89,7 @@ export default function TaskDetailsSheet(
       () => props.task?.id,
       () => {
         setTitle(props.task?.header ?? "");
-        setDesc(props.task?.description ?? "");
+        setContent(props.task?.content ?? "");
         setPriority(props.task?.priority);
         setDueStr(toLocalDateInputString(props.task?.dueDate) ?? "");
         setEditingTags(false);
@@ -251,8 +251,10 @@ export default function TaskDetailsSheet(
           {/* Divider line below tags */}
           <div class="border-t border-white/10" />
           <div class="w-full">
-            <RichEditor />
-            {desc()}
+            <RichEditor value={content()} onChange={(val) => {
+              setContent(val);
+              debounceUpdate({ content: val });
+            }} />
           </div>
         </div>
       </SheetContent>

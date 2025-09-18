@@ -31,7 +31,7 @@ export function Dots(props: {
   const dotsArray = dots();
   if (!dotsArray) return null;
   return (
-    <div class="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+    <div class="task-dots absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
       {dots()!.map((d) => (
         <div
           style={{

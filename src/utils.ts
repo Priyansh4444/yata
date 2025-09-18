@@ -5,12 +5,12 @@ const DEFAULT_TAG_COLOR = "#3b82f6" as HexColor;
 function createTask(
   name: string,
   tags?: (string | Tag)[],
-  description?: string,
+  content?: string,
   options?: {
     priority?: Task["priority"];
-    dueDate?: Date | string;
+    dueDate?: Date;
     isDraft?: boolean;
-    completedAt?: Date | string;
+    completedAt?: Date;
   },
 ): Task {
   const normalizedTags = (tags ?? []).map((t) =>
@@ -19,9 +19,7 @@ function createTask(
       : { ...t, color: (t.color ?? DEFAULT_TAG_COLOR) as HexColor },
   );
   const dueDate = options?.dueDate ? new Date(options.dueDate) : undefined;
-  const completedAt = options?.completedAt
-    ? new Date(options.completedAt)
-    : undefined;
+  const completedAt = options?.completedAt ? new Date(options.completedAt) : undefined;
   return {
     id: generateUID(),
     header: name,
@@ -30,7 +28,7 @@ function createTask(
     dueDate,
     completedAt,
     priority: options?.priority,
-    description,
+    content,
     tags: normalizedTags,
   };
 }
@@ -66,8 +64,8 @@ function generateRandomTasks(count: number): Task[] {
             },
           ]
         : [];
-    const description =
-      Math.random() > 0.4 ? "Task description goes here..." : undefined;
+    const content =
+      Math.random() > 0.4 ? "Task content goes here..." : undefined;
     const priorityRoll = Math.random();
     const priority: Task["priority"] =
       priorityRoll > 0.8
@@ -82,7 +80,7 @@ function generateRandomTasks(count: number): Task[] {
         ? daysFromNow(Math.floor(Math.random() * 14) + 1)
         : undefined;
     tasks.push(
-      createTask(taskName, tags, description, {
+      createTask(taskName, tags, content, {
         priority,
         dueDate,
       }),

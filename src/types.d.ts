@@ -17,7 +17,7 @@ export type Task = {
   dueDate?: Option<Date>;
   completedAt?: Option<Date>;
   priority?: Option<Priority>;
-  description?: Option<string>;
+  content?: Option<string>;
   tags?: Option<Tag[]>;
 };
 

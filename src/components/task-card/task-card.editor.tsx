@@ -21,7 +21,7 @@ export default function InlineTaskEditor(props: Props) {
   const { onSave, onCancel, initial } = props;
   type FormState = {
     header: string;
-    description: string | undefined;
+    content: string | undefined;
     tags: Tag[];
     priority?: Option<Priority>;
     // Keep dueDate as an ISO date string for the input; convert before save
@@ -30,7 +30,7 @@ export default function InlineTaskEditor(props: Props) {
 
   const [form, setForm] = createStore<FormState>({
     header: initial?.header ?? "",
-    description: initial?.description,
+    content: initial?.content,
     tags: (initial?.tags ?? []) as Tag[],
     priority: initial?.priority,
     dueDate: toLocalDateInputString(initial?.dueDate),
@@ -51,7 +51,7 @@ export default function InlineTaskEditor(props: Props) {
   function handleDescriptionInput(
     e: InputEvent & { currentTarget: HTMLTextAreaElement },
   ) {
-    setForm("description", e.currentTarget.value);
+    setForm("content", e.currentTarget.value);
   }
 
   function parseLocalDateInput(input: string | undefined): Date | undefined {
@@ -67,8 +67,7 @@ export default function InlineTaskEditor(props: Props) {
     const updates: Partial<Task> = {};
     const header = form.header.trim();
     if (header) updates.header = header;
-    if (form.description && form.description.trim())
-      updates.description = form.description.trim();
+    if (form.content && form.content.trim()) updates.content = form.content.trim();
     if (form.tags && form.tags.length > 0) updates.tags = form.tags;
     if (form.priority !== undefined) updates.priority = form.priority;
     const dueDate = parseLocalDateInput(form.dueDate);
@@ -88,8 +87,8 @@ export default function InlineTaskEditor(props: Props) {
       <textarea
         class="w-full bg-transparent text-xs text-zinc-400 placeholder-zinc-600 outline-none resize-none"
         rows={3}
-        placeholder="Description (optional)"
-        value={form.description || ""}
+        placeholder="Content (optional)"
+        value={form.content || ""}
         onInput={handleDescriptionInput}
       />
       <div class="flex items-center gap-2">

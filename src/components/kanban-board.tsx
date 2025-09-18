@@ -1,10 +1,11 @@
 import { TaskList } from "@/types";
 import KanbanList from "@/components/task-list/task-list";
-import { For, Show, createSignal, onMount, onCleanup } from "solid-js";
+import { For, Show, createSignal, onMount, onCleanup, createEffect } from "solid-js";
 import { createStore, reconcile, unwrap } from "solid-js/store";
 import { createTaskList } from "@/utils";
 import NewListCard from "@/components/task-list/task-list.create";
 import { createUndoRedo } from "@/libs/undo";
+import { saveBoardIfChanged } from "@/libs/storage";
 import {
   DragDropProvider,
   DragDropSensors,
@@ -23,9 +24,11 @@ interface KanbanBoardProps {
 
 export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
   const [lists, setLists] = createStore<TaskList[]>(taskLists);
+  const COMPLETED_LIST_ID = "completed";
   const [isAdding, setIsAdding] = createSignal<boolean>(false);
   const [newListName, setNewListName] = createSignal<string>("");
   const history = createUndoRedo<TaskList[]>({ limit: 100 });
+  let lastSavedJson: string | undefined = undefined;
 
   function snapshotBoard() {
     // Clone only the board structure to avoid regenerating per-card random visuals
@@ -38,7 +41,9 @@ export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
     const header = (name ?? newListName()).trim();
     if (header.length === 0) return; // no-op on empty input
     const newList = createTaskList(header, []);
-    setLists(taskLists.length, newList);
+    const completedIndex = lists.findIndex((l) => l.id === COMPLETED_LIST_ID);
+    const insertIndex = completedIndex === -1 ? lists.length : Math.max(0, completedIndex);
+    setLists(insertIndex, newList);
     setNewListName("");
     setIsAdding(false);
   }
@@ -96,6 +101,28 @@ export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
   onMount(() => window.addEventListener("keydown", handleKeydown));
   onCleanup(() => window.removeEventListener("keydown", handleKeydown));
 
+  // Ensure a special Completed list exists and remains last
+  onMount(() => {
+    const hasCompleted = lists.some((l) => l.id === COMPLETED_LIST_ID);
+    if (!hasCompleted) {
+      const completed: TaskList = { id: COMPLETED_LIST_ID, header: "Completed", tasks: [] };
+      setLists(lists.length, completed);
+    }
+  });
+
+  // Debounced autosave
+  let saveTimer: number | undefined;
+  createEffect(() => {
+    // Read lists to track changes
+    const current = unwrap(lists);
+    // Clear pending timer
+    if (saveTimer) clearTimeout(saveTimer);
+    // debounce 400ms
+    saveTimer = window.setTimeout(async () => {
+      lastSavedJson = await saveBoardIfChanged(current, lastSavedJson);
+    }, 400);
+  });
+
   function groupIds(): string[] {
     return lists.map((list) => list.id);
   }
@@ -147,8 +174,17 @@ export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
   function reorderGroups(draggableId: string, droppableId: string) {
     if (draggableId === droppableId) return;
 
+    // Prevent moving the Completed list and prevent dropping onto Completed as a target position
+    if (draggableId === COMPLETED_LIST_ID) return;
+
     const fromIndex = lists.findIndex((list) => list.id === draggableId);
-    const toIndex = lists.findIndex((list) => list.id === droppableId);
+    let toIndex = lists.findIndex((list) => list.id === droppableId);
+
+    // If target is Completed, drop just before it to keep Completed last
+    const completedIndex = lists.findIndex((l) => l.id === COMPLETED_LIST_ID);
+    if (droppableId === COMPLETED_LIST_ID && completedIndex !== -1) {
+      toIndex = Math.max(0, completedIndex - 1);
+    }
 
     if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
 
@@ -161,6 +197,12 @@ export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
     }));
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
+    // Ensure Completed remains last
+    const movedCompletedIndex = next.findIndex((l) => l.id === COMPLETED_LIST_ID);
+    if (movedCompletedIndex !== -1 && movedCompletedIndex !== next.length - 1) {
+      const [comp] = next.splice(movedCompletedIndex, 1);
+      next.push(comp);
+    }
     setLists(reconcile(next));
   }
 
@@ -212,11 +254,23 @@ export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
       header: list.header,
       tasks: list.tasks.slice(),
     }));
+    const fromListId = next[from.groupIndex].id;
     const [moved] = next[from.groupIndex].tasks.splice(from.itemIndex, 1);
     const adjustedIndex =
       from.groupIndex === targetGroupIndex && from.itemIndex < targetIndex
         ? Math.max(0, targetIndex - 1)
         : targetIndex;
+    const toListId = next[targetGroupIndex].id;
+    const changingGroup = from.groupIndex !== targetGroupIndex;
+    if (changingGroup) {
+      const movingIntoCompleted = toListId === COMPLETED_LIST_ID;
+      const movingOutOfCompleted = fromListId === COMPLETED_LIST_ID && toListId !== COMPLETED_LIST_ID;
+      if (movingIntoCompleted) {
+        moved.completedAt = new Date();
+      } else if (movingOutOfCompleted) {
+        moved.completedAt = undefined;
+      }
+    }
     next[targetGroupIndex].tasks.splice(adjustedIndex, 0, moved);
     setLists(reconcile(next));
   }
@@ -267,6 +321,7 @@ export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
                 onRenameList={(name) => renameListAt(i(), name)}
                 onDeleteList={() => deleteListAt(i())}
                 listId={list.id}
+                isGroupDraggable={list.id !== COMPLETED_LIST_ID}
               />
             )}
           </For>

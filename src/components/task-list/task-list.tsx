@@ -28,6 +28,7 @@ interface KanbanListProps {
   onRenameList: (name: string) => void;
   onDeleteList: () => void;
   listId: string;
+  isGroupDraggable?: boolean;
 }
 
 export default function KanbanList({
@@ -35,6 +36,7 @@ export default function KanbanList({
   onRenameList,
   onDeleteList,
   listId,
+  isGroupDraggable = true,
 }: KanbanListProps) {
   const [tasks, setTasks] = createStore<Task[]>(taskList.tasks);
   const [openTaskIndex, setOpenTaskIndex] = createSignal<number | null>(null);
@@ -147,12 +149,13 @@ export default function KanbanList({
     setTasks(reconcile(taskList.tasks));
   });
 
-  const listSortable = createSortable(listId, { type: "group" });
+  const listSortable = createSortable(listId, { type: "group", disabled: !isGroupDraggable });
 
   return (
     <section
       ref={listSortable.ref}
       style={maybeTransformStyle(listSortable.transform)}
+      data-list-id={listId}
       classList={{ "opacity-25": listSortable.isActiveDraggable }}
       class="
         column relative flex flex-col h-full rounded-2xl
@@ -170,7 +173,7 @@ export default function KanbanList({
           bg-black/20
           border-b border-white/5
         "
-        {...listSortable.dragActivators}
+        {...(isGroupDraggable ? listSortable.dragActivators : {})}
       >
         <div class="flex items-center gap-2">
           <span class="h-2 w-2 rounded-full bg-emerald-400/80 shadow-[0_0_8px_1px_rgba(16,185,129,0.5)]" />

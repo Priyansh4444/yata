@@ -1,18 +1,30 @@
-import { onMount } from "solid-js";
+import { onCleanup, onMount } from "solid-js";
 import { createEditor, defaultContent } from "./editor-config";
 import "./editor-styles.css";
 import "katex/dist/katex.min.css";
 
-export default function RichEditor() {
+type Props = {
+  value?: string;
+  onChange?: (value: string) => void;
+};
+
+export default function RichEditor(props: Props) {
+  let editorElement: HTMLDivElement | undefined;
+  let editor: ReturnType<typeof createEditor> | undefined;
   onMount(() => {
-    const editorElement: HTMLElement = document.getElementById("editor")!;
     if (editorElement) {
-      createEditor({
+      editor = createEditor({
         element: editorElement,
-        content: defaultContent,
+        content: props.value ?? defaultContent,
         autofocus: "start",
+      });
+      editor.on("update", () => {
+        props.onChange?.(editor!.getHTML());
       });
     }
   });
-  return <div id="editor" class="text-white w-full"></div>;
+  onCleanup(() => {
+    editor?.destroy?.();
+  });
+  return <div ref={editorElement!} id="editor" class="text-white w-full"></div>;
 }
