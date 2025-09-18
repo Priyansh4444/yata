@@ -16,12 +16,9 @@ import { createTask } from "@/utils";
 import InlineListTitle from "@/components/task-list/task-list.title-edit";
 import TaskDetailsSheet from "@components/task-details-sheet";
 import { createUndoRedo } from "@/libs/undo";
-import {
-  SortableProvider,
-  createSortable,
-  maybeTransformStyle,
-  type Id,
-} from "@thisbeyond/solid-dnd";
+import { createUndoRedoHotkeys } from "@/libs/hotkeys";
+import { SortableProvider, createSortable, maybeTransformStyle } from "@thisbeyond/solid-dnd";
+import SortableTaskCard from "./sortable-task-card";
 
 interface KanbanListProps {
   taskList: TaskList;
@@ -122,28 +119,13 @@ export default function KanbanList({
     });
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    const isCtrl = e.ctrlKey || e.metaKey;
-    if (!isCtrl) return;
-
-    if (e.key.toLowerCase() === "z") {
-      e.preventDefault();
-      const prev = history.undo(tasks.map((task) => ({ ...task })));
-      if (prev) setTasks(reconcile(prev));
-    } else if (e.key.toLowerCase() === "y") {
-      e.preventDefault();
-      const next = history.redo(tasks.map((task) => ({ ...task })));
-      if (next) setTasks(reconcile(next));
-    }
-  }
-
-  onMount(() => {
-    window.addEventListener("keydown", handleKeydown);
-  });
-
-  onCleanup(() => {
-    window.removeEventListener("keydown", handleKeydown);
-  });
+  const hotkeys = createUndoRedoHotkeys(
+    history,
+    () => tasks.map((task) => ({ ...task })),
+    (state) => setTasks(reconcile(state)),
+  );
+  onMount(() => hotkeys.mount());
+  onCleanup(() => hotkeys.cleanup());
 
   createEffect(() => {
     setTasks(reconcile(taskList.tasks));
@@ -310,26 +292,4 @@ export default function KanbanList({
   );
 }
 
-interface SortableTaskCardProps {
-  id: Id;
-  group: string;
-  children: JSX.Element;
-}
-
-function SortableTaskCard(props: SortableTaskCardProps) {
-  const sortable = createSortable(props.id, {
-    type: "item",
-    group: props.group,
-  });
-
-  return (
-    <div
-      ref={sortable.ref}
-      style={maybeTransformStyle(sortable.transform)}
-      {...sortable.dragActivators}
-      classList={{ "opacity-25": sortable.isActiveDraggable }}
-    >
-      {props.children}
-    </div>
-  );
-}
+// moved to ./sortable-task-card to keep this file focused

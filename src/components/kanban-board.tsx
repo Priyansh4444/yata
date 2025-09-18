@@ -3,6 +3,8 @@ import KanbanList from "@/components/task-list/task-list";
 import { For, Show, createSignal, onMount, onCleanup, createEffect } from "solid-js";
 import { createStore, reconcile, unwrap } from "solid-js/store";
 import { createTaskList } from "@/utils";
+import { COMPLETED_LIST_ID, isSortableGroup, getGroupIds, getItemIdsByGroup } from "@/libs/dnd-helpers";
+import { createUndoRedoHotkeys } from "@/libs/hotkeys";
 import NewListCard from "@/components/task-list/task-list.create";
 import { createUndoRedo } from "@/libs/undo";
 import { saveBoardIfChanged } from "@/libs/storage";
@@ -13,7 +15,6 @@ import {
   DragOverlay,
   closestCenter,
   type DragEventHandler,
-  type Draggable,
   type Droppable,
   type CollisionDetector,
 } from "@thisbeyond/solid-dnd";
@@ -24,7 +25,7 @@ interface KanbanBoardProps {
 
 export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
   const [lists, setLists] = createStore<TaskList[]>(taskLists);
-  const COMPLETED_LIST_ID = "completed";
+  // Completed list id centralized in dnd-helpers
   const [isAdding, setIsAdding] = createSignal<boolean>(false);
   const [newListName, setNewListName] = createSignal<string>("");
   const history = createUndoRedo<TaskList[]>({ limit: 100 });
@@ -71,35 +72,12 @@ export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
     setNewListName("");
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    const isCtrl = e.ctrlKey || e.metaKey;
-    if (!isCtrl) return;
-
-    if (e.key.toLowerCase() === "z") {
-      e.preventDefault();
-      const prev = history.undo(
-        lists.map((list) => ({
-          id: list.id,
-          header: list.header,
-          tasks: list.tasks,
-        })),
-      );
-      if (prev) setLists(prev);
-    } else if (e.key.toLowerCase() === "y") {
-      e.preventDefault();
-      const next = history.redo(
-        lists.map((list) => ({
-          id: list.id,
-          header: list.header,
-          tasks: list.tasks,
-        })),
-      );
-      if (next) setLists(next);
-    }
-  }
-
-  onMount(() => window.addEventListener("keydown", handleKeydown));
-  onCleanup(() => window.removeEventListener("keydown", handleKeydown));
+  const hotkeys = createUndoRedoHotkeys(history, () =>
+    lists.map((list) => ({ id: list.id, header: list.header, tasks: list.tasks })),
+    (state) => setLists(state),
+  );
+  onMount(() => hotkeys.mount());
+  onCleanup(() => hotkeys.cleanup());
 
   // Ensure a special Completed list exists and remains last
   onMount(() => {
@@ -123,18 +101,10 @@ export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
     }, 400);
   });
 
-  function groupIds(): string[] {
-    return lists.map((list) => list.id);
-  }
+  const groupIds = () => getGroupIds(lists);
+  const groupItemIds = (listId: string) => getItemIdsByGroup(lists, listId);
 
-  function groupItemIds(listId: string): string[] {
-    const list = lists.find((list) => list.id === listId)!;
-    return list.tasks.map((task) => task.id) ?? [];
-  }
-
-  function isSortableGroup(x: Draggable | Droppable): boolean {
-    return x?.data?.type === "group";
-  }
+  // isSortableGroup imported
 
   const closestEntity: CollisionDetector = (draggable, droppables, context) => {
     const closestGroup = closestCenter(
