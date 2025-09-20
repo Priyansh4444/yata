@@ -1,15 +1,5 @@
 import type { Id } from "@thisbeyond/solid-dnd";
-import {
-  DragDropProvider,
-  DragDropSensors,
-  DragOverlay,
-  SortableProvider,
-  closestCenter,
-  type DragEventHandler,
-  type Draggable,
-  type Droppable,
-  type CollisionDetector,
-} from "@thisbeyond/solid-dnd";
+import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, type DragEventHandler, type Draggable, type Droppable } from "@thisbeyond/solid-dnd";
 import { For, Show, createSignal, onMount } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import KanbanList from "@/components/task-list/task-list";
@@ -17,10 +7,10 @@ import NewListCard from "@/components/task-list/task-list.create";
 import type { Task, TaskList } from "@/types";
 import { createTaskList } from "@/utils";
 import { loadBoard, saveBoard } from "@/libs/storage";
+import { boardCollisionDetector, computeMovedLists, isGroup } from "./kanban-board/dnd";
+import { computeInsertIndexForNewList } from "./kanban-board/insert";
+import { COMPLETED_LIST_ID } from "@/libs/dnd-helpers";
 
-function isGroup(x: Draggable | Droppable | undefined | null) {
-  return !!x && x.data?.type === "group";
-}
 
 export default function KanbanBoard() {
   const [lists, setLists] = createStore<TaskList[]>([]);
@@ -29,11 +19,17 @@ export default function KanbanBoard() {
   onMount(async () => {
     const loaded = await loadBoard();
     if (loaded && loaded.length > 0) {
-      setLists(reconcile(loaded));
+      const hasCompleted = loaded.some((l) => l.id === COMPLETED_LIST_ID);
+      const next = hasCompleted
+        ? loaded
+        : [...loaded, { id: COMPLETED_LIST_ID, header: "Completed", tasks: [] }];
+      setLists(reconcile(next));
+      if (next !== loaded) await saveBoard(next);
     } else {
-      // Start with one empty list to get going
-      setLists([createTaskList("Todo", [])]);
-      await saveBoard([createTaskList("Todo", [])]);
+      // Start with Completed column by default
+      const initial = [{ id: COMPLETED_LIST_ID, header: "Completed", tasks: [] }];
+      setLists(initial);
+      await saveBoard(initial);
     }
   });
 
@@ -56,13 +52,22 @@ export default function KanbanBoard() {
   }
 
   function deleteList(listId: string) {
+    if (listId === COMPLETED_LIST_ID) return; // never delete Completed
     const next = lists.filter((l) => l.id !== listId);
     setLists(reconcile(next));
     void saveBoard(next);
   }
 
   async function addList(name: string) {
-    const next = [...lists, createTaskList(name, [])];
+    const newList = createTaskList(name, []);
+    let next: TaskList[];
+    if (lists.length === 0) {
+      next = [newList];
+    } else {
+      const insertAt = computeInsertIndexForNewList(lists);
+      next = lists.slice();
+      next.splice(insertAt, 0, newList);
+    }
     setLists(reconcile(next));
     setAddingList(false);
     await saveBoard(next);
@@ -76,97 +81,25 @@ export default function KanbanBoard() {
     return null;
   }
 
-  const collisionDetector: CollisionDetector = (draggable, droppables, context) => {
-    const closestGroup = closestCenter(
-      draggable,
-      droppables.filter((d) => isGroup(d)),
-      context,
-    );
-    if (isGroup(draggable)) return closestGroup;
-    if (closestGroup) {
-      const closestItem = closestCenter(
-        draggable,
-        droppables.filter((d) => !isGroup(d) && d.data.group === closestGroup.id),
-        context,
-      );
-      return closestItem ?? closestGroup;
-    }
-    return null;
-  };
+  const collisionDetector = boardCollisionDetector;
 
   function move(draggable: Draggable, droppable: Droppable) {
-    if (!draggable || !droppable) return;
-
-    const draggableIsGroup = isGroup(draggable);
-    const droppableIsGroup = isGroup(droppable);
-
-    if (draggableIsGroup) {
-      const from = lists.findIndex((l) => l.id === draggable.id);
-      const targetGroupId = droppableIsGroup ? droppable.id : droppable.data.group;
-      const to = lists.findIndex((l) => l.id === targetGroupId);
-      if (from === -1 || to === -1 || from === to) return;
-      const next = lists.slice();
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved);
-      setLists(reconcile(next));
-      return;
-    }
-
-    // Item move
-    const loc = findTask(draggable.id);
-    if (!loc) return;
-    const sourceListIndex = loc.listIndex;
-    const sourceTaskIndex = loc.taskIndex;
-
-    const targetGroupId = droppableIsGroup ? droppable.id : droppable.data.group;
-    const targetListIndex = lists.findIndex((l) => l.id === targetGroupId);
-    if (targetListIndex === -1) return;
-
-    // If within the same list, let the list component handle reordering to avoid conflicts
-    if (targetListIndex === sourceListIndex) {
-      // Debug
-      console.debug("[DND][Board] Skip within-list move (handled locally)", {
-        listId: targetGroupId,
-        draggableId: draggable.id,
-        droppableId: droppableIsGroup ? null : droppable.id,
-      });
-      return;
-    }
-
-    // Build next lists with shallow copies
-    const next = lists.map((l) => ({ ...l, tasks: [...l.tasks] }));
-
-    // Remove from source
-    const [movedTask] = next[sourceListIndex].tasks.splice(sourceTaskIndex, 1);
-    if (!movedTask) return;
-
-    // Determine insertion index
-    let insertIndex = next[targetListIndex].tasks.length; // default end
-    if (!droppableIsGroup) {
-      const idx = next[targetListIndex].tasks.findIndex((t) => t.id === droppable.id);
-      if (idx !== -1) insertIndex = idx; // insert before the target item
-    }
-
-    next[targetListIndex].tasks.splice(insertIndex, 0, movedTask);
-    console.debug("[DND][Board] Cross-list move", {
-      fromListId: lists[sourceListIndex].id,
-      toListId: lists[targetListIndex].id,
-      fromTaskIndex: sourceTaskIndex,
-      toInsertIndex: insertIndex,
-      taskId: draggable.id,
-    });
+    const next = computeMovedLists(lists, draggable, droppable);
+    if (!next) return;
     setLists(reconcile(next));
   }
 
   const onDragOver: DragEventHandler = ({ draggable, droppable }) => {
     if (!draggable || !droppable) return;
+    // Avoid reordering lists during hover; only finalize on drag end.
+    if (isGroup(draggable)) return;
     move(draggable, droppable);
   };
 
   const onDragEnd: DragEventHandler = async ({ draggable, droppable }) => {
     if (!draggable || !droppable) return;
     move(draggable, droppable);
-    await saveBoard(lists as unknown as TaskList[]);
+    await saveBoard(lists);
   };
 
   return (
@@ -183,7 +116,7 @@ export default function KanbanBoard() {
                   onRenameList={(name) => renameList(list.id, name)}
                   onDeleteList={() => deleteList(list.id)}
                   onTasksChange={(tasks) => updateListTasks(list.id, tasks)}
-                  isGroupDraggable={true}
+                  isGroupDraggable={list.id !== COMPLETED_LIST_ID}
                 />
               )}
             </For>
