@@ -1,6 +1,7 @@
 import { Editor, FocusPosition } from "@tiptap/core";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import Youtube from "@tiptap/extension-youtube";
+import Image from "@tiptap/extension-image";
 import StarterKit from "@tiptap/starter-kit";
 // Tasks: node extensions for task lists/items
 import TaskList from "@tiptap/extension-task-list";
@@ -106,6 +107,9 @@ export function createEditor(config: EditorConfig): Editor {
     extensions: [
       StarterKit.configure({
         codeBlock: false,
+      }),
+      Image.configure({
+        allowBase64: true,
       }),
       CodeBlockLowlight.configure({
         lowlight,

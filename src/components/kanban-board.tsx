@@ -1,367 +1,234 @@
-import { TaskList } from "@/types";
-import KanbanList from "@/components/task-list/task-list";
-import { For, Show, createSignal, onMount, onCleanup, createEffect } from "solid-js";
-import { createStore, reconcile, unwrap } from "solid-js/store";
-import { createTaskList } from "@/utils";
-import { COMPLETED_LIST_ID, isSortableGroup, getGroupIds, getItemIdsByGroup } from "@/libs/dnd-helpers";
-import { createUndoRedoHotkeys } from "@/libs/hotkeys";
-import NewListCard from "@/components/task-list/task-list.create";
-import { createUndoRedo } from "@/libs/undo";
-import { saveBoardIfChanged } from "@/libs/storage";
+import type { Id } from "@thisbeyond/solid-dnd";
 import {
   DragDropProvider,
   DragDropSensors,
-  SortableProvider,
   DragOverlay,
+  SortableProvider,
   closestCenter,
   type DragEventHandler,
+  type Draggable,
   type Droppable,
   type CollisionDetector,
 } from "@thisbeyond/solid-dnd";
+import { For, Show, createSignal, onMount } from "solid-js";
+import { createStore, reconcile } from "solid-js/store";
+import KanbanList from "@/components/task-list/task-list";
+import NewListCard from "@/components/task-list/task-list.create";
+import type { Task, TaskList } from "@/types";
+import { createTaskList } from "@/utils";
+import { loadBoard, saveBoard } from "@/libs/storage";
 
-interface KanbanBoardProps {
-  taskLists: TaskList[];
+function isGroup(x: Draggable | Droppable | undefined | null) {
+  return !!x && x.data?.type === "group";
 }
 
-export default function KanbanBoard({ taskLists }: KanbanBoardProps) {
-  const [lists, setLists] = createStore<TaskList[]>(taskLists);
-  // Completed list id centralized in dnd-helpers
-  const [isAdding, setIsAdding] = createSignal<boolean>(false);
-  const [newListName, setNewListName] = createSignal<string>("");
-  const history = createUndoRedo<TaskList[]>({ limit: 100 });
-  let lastSavedJson: string | undefined = undefined;
+export default function KanbanBoard() {
+  const [lists, setLists] = createStore<TaskList[]>([]);
+  const [addingList, setAddingList] = createSignal(false);
 
-  function snapshotBoard() {
-    // Clone only the board structure to avoid regenerating per-card random visuals
-    // Getting the raw data  https://docs.solidjs.com/concepts/stores#extracting-raw-data-with-unwrap
-    history.push(unwrap(lists));
-  }
-
-  function addList(name?: string) {
-    snapshotBoard();
-    const header = (name ?? newListName()).trim();
-    if (header.length === 0) return; // no-op on empty input
-    const newList = createTaskList(header, []);
-    const completedIndex = lists.findIndex((l) => l.id === COMPLETED_LIST_ID);
-    const insertIndex = completedIndex === -1 ? lists.length : Math.max(0, completedIndex);
-    setLists(insertIndex, newList);
-    setNewListName("");
-    setIsAdding(false);
-  }
-
-  function renameListAt(index: number, newHeader: string) {
-    setLists(index, (taskList) => ({
-      ...taskList,
-      header: newHeader.trim(),
-    }));
-  }
-
-  function deleteListAt(index: number) {
-    snapshotBoard();
-    const next = lists.filter((_, i) => i !== index);
-    setLists(reconcile(next)); // reconcile to avoid non diff data to trigger re-renders
-  }
-
-  function startAdd() {
-    setIsAdding(true);
-    setNewListName("");
-  }
-
-  function cancelAdd() {
-    setIsAdding(false);
-    setNewListName("");
-  }
-
-  const hotkeys = createUndoRedoHotkeys(history, () =>
-    lists.map((list) => ({ id: list.id, header: list.header, tasks: list.tasks })),
-    (state) => setLists(state),
-  );
-  onMount(() => hotkeys.mount());
-  onCleanup(() => hotkeys.cleanup());
-
-  // Ensure a special Completed list exists and remains last
-  onMount(() => {
-    const hasCompleted = lists.some((l) => l.id === COMPLETED_LIST_ID);
-    if (!hasCompleted) {
-      const completed: TaskList = { id: COMPLETED_LIST_ID, header: "Completed", tasks: [] };
-      setLists(lists.length, completed);
+  onMount(async () => {
+    const loaded = await loadBoard();
+    if (loaded && loaded.length > 0) {
+      setLists(reconcile(loaded));
+    } else {
+      // Start with one empty list to get going
+      setLists([createTaskList("Todo", [])]);
+      await saveBoard([createTaskList("Todo", [])]);
     }
   });
 
-  // Debounced autosave
-  let saveTimer: number | undefined;
-  createEffect(() => {
-    // Read lists to track changes
-    const current = unwrap(lists);
-    // Clear pending timer
-    if (saveTimer) clearTimeout(saveTimer);
-    // debounce 400ms
-    saveTimer = window.setTimeout(async () => {
-      lastSavedJson = await saveBoardIfChanged(current, lastSavedJson);
-    }, 400);
-  });
+  const listIds = () => lists.map((l) => l.id);
 
-  const groupIds = () => getGroupIds(lists);
-  const groupItemIds = (listId: string) => getItemIdsByGroup(lists, listId);
+  function updateListTasks(listId: string, tasks: Task[]) {
+    const idx = lists.findIndex((l) => l.id === listId);
+    if (idx === -1) return;
+    const next = lists.map((l, i) => (i === idx ? { ...l, tasks } : l));
+    setLists(reconcile(next));
+    void saveBoard(next);
+  }
 
-  // isSortableGroup imported
+  function renameList(listId: string, name: string) {
+    const idx = lists.findIndex((l) => l.id === listId);
+    if (idx === -1) return;
+    const next = lists.map((l, i) => (i === idx ? { ...l, header: name } : l));
+    setLists(reconcile(next));
+    void saveBoard(next);
+  }
 
-  const closestEntity: CollisionDetector = (draggable, droppables, context) => {
+  function deleteList(listId: string) {
+    const next = lists.filter((l) => l.id !== listId);
+    setLists(reconcile(next));
+    void saveBoard(next);
+  }
+
+  async function addList(name: string) {
+    const next = [...lists, createTaskList(name, [])];
+    setLists(reconcile(next));
+    setAddingList(false);
+    await saveBoard(next);
+  }
+
+  function findTask(taskId: Id): { listIndex: number; taskIndex: number } | null {
+    for (let li = 0; li < lists.length; li++) {
+      const ti = lists[li].tasks.findIndex((t) => t.id === taskId);
+      if (ti !== -1) return { listIndex: li, taskIndex: ti };
+    }
+    return null;
+  }
+
+  const collisionDetector: CollisionDetector = (draggable, droppables, context) => {
     const closestGroup = closestCenter(
       draggable,
-      droppables.filter(isSortableGroup),
+      droppables.filter((d) => isGroup(d)),
       context,
     );
-    if (isSortableGroup(draggable)) return closestGroup;
-
+    if (isGroup(draggable)) return closestGroup;
     if (closestGroup) {
-      const listId = String(closestGroup.id);
       const closestItem = closestCenter(
         draggable,
-        droppables.filter(
-          (droppable) => !isSortableGroup(droppable) && droppable.data?.group === listId,
-        ),
+        droppables.filter((d) => !isGroup(d) && d.data.group === closestGroup.id),
         context,
       );
-
-      if (!closestItem) return closestGroup;
-
-      const changingGroup = draggable.data?.group !== listId;
-      if (changingGroup) {
-        const ids = groupItemIds(listId);
-        const lastId = ids.length > 0 ? ids[ids.length - 1] : undefined;
-        const belowLastItem =
-          lastId === String(closestItem.id) &&
-          draggable.transformed.center.y > closestItem.transformed.center.y;
-        if (belowLastItem) return closestGroup;
-      }
-
-      return closestItem;
+      return closestItem ?? closestGroup;
     }
     return null;
   };
 
-  function reorderGroups(draggableId: string, droppableId: string) {
-    if (draggableId === droppableId) return;
+  function move(draggable: Draggable, droppable: Droppable) {
+    if (!draggable || !droppable) return;
 
-    // Prevent moving the Completed list and prevent dropping onto Completed as a target position
-    if (draggableId === COMPLETED_LIST_ID) return;
+    const draggableIsGroup = isGroup(draggable);
+    const droppableIsGroup = isGroup(droppable);
 
-    const fromIndex = lists.findIndex((list) => list.id === draggableId);
-    let toIndex = lists.findIndex((list) => list.id === droppableId);
-
-    // If target is Completed, drop just before it to keep Completed last
-    const completedIndex = lists.findIndex((l) => l.id === COMPLETED_LIST_ID);
-    if (droppableId === COMPLETED_LIST_ID && completedIndex !== -1) {
-      toIndex = Math.max(0, completedIndex - 1);
-    }
-
-    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
-
-    snapshotBoard();
-    const base = unwrap(lists);
-    const next = base.map((list) => ({
-      id: list.id,
-      header: list.header,
-      tasks: list.tasks.slice(),
-    }));
-    const [moved] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, moved);
-    // Ensure Completed remains last
-    const movedCompletedIndex = next.findIndex((l) => l.id === COMPLETED_LIST_ID);
-    if (movedCompletedIndex !== -1 && movedCompletedIndex !== next.length - 1) {
-      const [comp] = next.splice(movedCompletedIndex, 1);
-      next.push(comp);
-    }
-    setLists(reconcile(next));
-  }
-
-  function moveItem(
-    draggableId: string,
-    droppable: Droppable,
-    onlyWhenChangingGroup = true,
-  ) {
-    const from = (() => {
-      for (let groupIndexIter = 0; groupIndexIter < lists.length; groupIndexIter++) {
-        const idx = lists[groupIndexIter].tasks.findIndex((task) => task.id === draggableId);
-        if (idx !== -1) return { groupIndex: groupIndexIter, itemIndex: idx };
-      }
-      return undefined;
-    })();
-
-    if (!from) return;
-
-    const droppableIsGroup = isSortableGroup(droppable);
-    const targetGroupId = droppableIsGroup
-      ? String(droppable.id)
-      : String(droppable.data?.group);
-    const targetGroupIndex = lists.findIndex(
-      (list) => list.id === targetGroupId,
-    );
-
-    if (onlyWhenChangingGroup && from.groupIndex === targetGroupIndex) return;
-
-    let targetIndex: number;
-    if (droppableIsGroup) {
-      targetIndex = lists[targetGroupIndex]?.tasks.length ?? 0;
-    } else {
-      const ids = groupItemIds(targetGroupId);
-      const toIndex = ids.indexOf(String(droppable.id));
-      const existingIndexInTarget = ids.indexOf(draggableId);
-      if (toIndex === -1) return;
-      targetIndex =
-        existingIndexInTarget === -1 || existingIndexInTarget > toIndex
-          ? toIndex
-          : toIndex + 1;
-    }
-
-    if (from.groupIndex === targetGroupIndex && from.itemIndex === targetIndex)
+    if (draggableIsGroup) {
+      const from = lists.findIndex((l) => l.id === draggable.id);
+      const targetGroupId = droppableIsGroup ? droppable.id : droppable.data.group;
+      const to = lists.findIndex((l) => l.id === targetGroupId);
+      if (from === -1 || to === -1 || from === to) return;
+      const next = lists.slice();
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      setLists(reconcile(next));
       return;
-
-    snapshotBoard();
-    const next = unwrap(lists).map((list) => ({
-      id: list.id,
-      header: list.header,
-      tasks: list.tasks.slice(),
-    }));
-    const fromListId = next[from.groupIndex].id;
-    const [moved] = next[from.groupIndex].tasks.splice(from.itemIndex, 1);
-    const adjustedIndex =
-      from.groupIndex === targetGroupIndex && from.itemIndex < targetIndex
-        ? Math.max(0, targetIndex - 1)
-        : targetIndex;
-    const toListId = next[targetGroupIndex].id;
-    const changingGroup = from.groupIndex !== targetGroupIndex;
-    if (changingGroup) {
-      const movingIntoCompleted = toListId === COMPLETED_LIST_ID;
-      const movingOutOfCompleted = fromListId === COMPLETED_LIST_ID && toListId !== COMPLETED_LIST_ID;
-      if (movingIntoCompleted) {
-        moved.completedAt = new Date();
-      } else if (movingOutOfCompleted) {
-        moved.completedAt = undefined;
-      }
     }
-    next[targetGroupIndex].tasks.splice(adjustedIndex, 0, moved);
+
+    // Item move
+    const loc = findTask(draggable.id);
+    if (!loc) return;
+    const sourceListIndex = loc.listIndex;
+    const sourceTaskIndex = loc.taskIndex;
+
+    const targetGroupId = droppableIsGroup ? droppable.id : droppable.data.group;
+    const targetListIndex = lists.findIndex((l) => l.id === targetGroupId);
+    if (targetListIndex === -1) return;
+
+    // If within the same list, let the list component handle reordering to avoid conflicts
+    if (targetListIndex === sourceListIndex) {
+      // Debug
+      console.debug("[DND][Board] Skip within-list move (handled locally)", {
+        listId: targetGroupId,
+        draggableId: draggable.id,
+        droppableId: droppableIsGroup ? null : droppable.id,
+      });
+      return;
+    }
+
+    // Build next lists with shallow copies
+    const next = lists.map((l) => ({ ...l, tasks: [...l.tasks] }));
+
+    // Remove from source
+    const [movedTask] = next[sourceListIndex].tasks.splice(sourceTaskIndex, 1);
+    if (!movedTask) return;
+
+    // Determine insertion index
+    let insertIndex = next[targetListIndex].tasks.length; // default end
+    if (!droppableIsGroup) {
+      const idx = next[targetListIndex].tasks.findIndex((t) => t.id === droppable.id);
+      if (idx !== -1) insertIndex = idx; // insert before the target item
+    }
+
+    next[targetListIndex].tasks.splice(insertIndex, 0, movedTask);
+    console.debug("[DND][Board] Cross-list move", {
+      fromListId: lists[sourceListIndex].id,
+      toListId: lists[targetListIndex].id,
+      fromTaskIndex: sourceTaskIndex,
+      toInsertIndex: insertIndex,
+      taskId: draggable.id,
+    });
     setLists(reconcile(next));
   }
 
   const onDragOver: DragEventHandler = ({ draggable, droppable }) => {
     if (!draggable || !droppable) return;
-    if (isSortableGroup(draggable)) return; // don't reorder groups on hover
-    moveItem(String(draggable.id), droppable, true);
+    move(draggable, droppable);
   };
 
-  const onDragEnd: DragEventHandler = ({ draggable, droppable }) => {
+  const onDragEnd: DragEventHandler = async ({ draggable, droppable }) => {
     if (!draggable || !droppable) return;
-
-    if (isSortableGroup(draggable) && isSortableGroup(droppable)) {
-      reorderGroups(String(draggable.id), String(droppable.id));
-      return;
-    }
-
-    if (!isSortableGroup(draggable)) {
-      moveItem(String(draggable.id), droppable, false);
-    }
+    move(draggable, droppable);
+    await saveBoard(lists as unknown as TaskList[]);
   };
-
-  function findTaskById(id: string) {
-    for (let groupIndex = 0; groupIndex < lists.length; groupIndex++) {
-      const tasks = lists[groupIndex].tasks;
-      const ii = tasks.findIndex((task) => task.id === id);
-      if (ii !== -1) {
-        return { groupIndex, ii, task: tasks[ii] };
-      }
-    }
-    return undefined;
-  }
 
   return (
     <div class="kanban-board h-full flex flex-row gap-6 overflow-x-auto pb-4 scrollbar-black">
-      <DragDropProvider
-        onDragOver={onDragOver}
-        onDragEnd={onDragEnd}
-        collisionDetector={closestEntity}
-      >
+      <DragDropProvider onDragOver={onDragOver} onDragEnd={onDragEnd} collisionDetector={collisionDetector}>
         <DragDropSensors />
-        <SortableProvider ids={groupIds()}>
-          <For each={lists}>
-            {(list, i) => (
-              <KanbanList
-                taskList={list}
-                onRenameList={(name) => renameListAt(i(), name)}
-                onDeleteList={() => deleteListAt(i())}
-                listId={list.id}
-                isGroupDraggable={list.id !== COMPLETED_LIST_ID}
-              />
-            )}
-          </For>
-        </SortableProvider>
+        <div class="columns flex flex-row gap-6 items-start">
+          <SortableProvider ids={listIds()}>
+            <For each={lists}>
+              {(list) => (
+                <KanbanList
+                  taskList={list}
+                  listId={list.id}
+                  onRenameList={(name) => renameList(list.id, name)}
+                  onDeleteList={() => deleteList(list.id)}
+                  onTasksChange={(tasks) => updateListTasks(list.id, tasks)}
+                  isGroupDraggable={true}
+                />
+              )}
+            </For>
+          </SortableProvider>
+
+          <Show when={!addingList()}>
+            <button
+              type="button"
+              class="min-w-[320px] w-[360px] max-w-[400px] h-[52px] rounded-xl border border-dashed border-white/10 text-zinc-400 hover:text-zinc-200 hover:border-white/20 bg-black/10"
+              onClick={() => setAddingList(true)}
+            >
+              + Add list
+            </button>
+          </Show>
+          <Show when={addingList()}>
+            <div class="min-w-[320px] w-[360px] max-w-[400px]">
+              <NewListCard onAdd={addList} onCancel={() => setAddingList(false)} />
+            </div>
+          </Show>
+        </div>
 
         <DragOverlay>
           {(draggable) => {
             if (!draggable) return null;
-
-            if (isSortableGroup(draggable)) {
-              const listId = String(draggable.id);
-              const list = lists.find((list) => list.id === listId);
+            if (isGroup(draggable)) {
+              const list = lists.find((l) => l.id === draggable.id);
+              if (!list) return null;
               return (
-                <div class="rounded-2xl px-4 py-3 bg-black/40 border border-white/10 text-zinc-200">
-                  {list?.header ?? "List"}
+                <div class="column bg-black/40 border border-white/10 rounded-2xl">
+                  <div class="px-4 py-3 border-b border-white/10">{list.header}</div>
+                  <div class="p-3 space-y-3">
+                    <For each={list.tasks}>
+                      {(t) => <div class="rounded-xl px-4 py-2 bg-black/30 border border-white/10 text-zinc-200">{t.header}</div>}
+                    </For>
+                  </div>
                 </div>
               );
             }
-
-            const id = String(draggable.id);
-            const taskLocation = findTaskById(id);
-
-            if (!taskLocation) return null;
-
-            return (
-              <div class="rounded-xl px-4 py-2 bg-black/60 border border-white/10 text-zinc-200 max-w-[360px]">
-                {taskLocation.task.header?.trim() || "Untitled Task"}
-              </div>
-            );
+            const loc = findTask(draggable.id);
+            if (!loc) return null;
+            const task = lists[loc.listIndex].tasks[loc.taskIndex];
+            return <div class="rounded-xl px-4 py-2 bg-black/60 border border-white/10 text-zinc-200 max-w-[360px]">{task.header}</div>;
           }}
         </DragOverlay>
       </DragDropProvider>
-
-      <section class="column flex flex-col h-full rounded-2xl min-w-[320px] w-[360px] max-w-[400px]">
-        <Show
-          when={isAdding()}
-          fallback={
-            <button
-              type="button"
-              class="rounded-2xl border border-dashed border-white/10 bg-black/30 backdrop-blur-sm p-4 group relative overflow-hidden min-h-[140px] grid place-items-center"
-              onClick={startAdd}
-              title="Add a new list"
-            >
-              <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                <div class="absolute -top-16 -left-16 h-36 w-36 rounded-full bg-emerald-400/10 blur-2xl" />
-                <div class="absolute -bottom-20 -right-20 h-40 w-40 rounded-full bg-blue-500/10 blur-2xl" />
-              </div>
-              <div class="relative z-10 flex flex-col items-center gap-2">
-                <span class="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] group-hover:bg-white/[0.08] transition-colors ring-1 ring-inset ring-white/5 text-zinc-300">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    class="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                </span>
-                <span class="text-xs text-zinc-300">New list</span>
-              </div>
-            </button>
-          }
-        >
-          <NewListCard onAdd={(n) => addList(n)} onCancel={cancelAdd} />
-        </Show>
-      </section>
     </div>
   );
 }

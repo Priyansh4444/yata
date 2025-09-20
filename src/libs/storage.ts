@@ -1,33 +1,57 @@
 import type { TaskList, Task } from "@/types";
-import { BaseDirectory, readTextFile, writeTextFile, exists, mkdir } from "@tauri-apps/plugin-fs";
-
+import {
+  BaseDirectory,
+  readTextFile,
+  writeTextFile,
+  exists,
+  mkdir,
+  remove,
+  writeFile,
+  readDir,
+} from "@tauri-apps/plugin-fs";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { appDataDir, join } from "@tauri-apps/api/path";
 const ROOT_DIR = "boards";
-const SESSIONS_DIR = `${ROOT_DIR}/sessions`;
-const LOAD_FILE = `${ROOT_DIR}/load.json`;
+const BOARD_FILE = `${ROOT_DIR}/board.json`;
+const LEGACY_LOAD_FILE = `${ROOT_DIR}/load.json`;
 
-type SerializableTask = Omit<Task, "createdAt" | "dueDate" | "completedAt"> & {
+type SerializableTask = Omit<
+  Task,
+  "createdAt" | "dueDate" | "completedAt" | "content"
+> & {
   createdAt: string;
   dueDate?: string;
   completedAt?: string;
+  contentPath?: string;
+  assetsDir?: string;
 };
 
-type SerializableTaskList = Omit<TaskList, never> & {
+type SerializableTaskList = {
+  id: string;
+  header: string;
   tasks: SerializableTask[];
 };
 
 type BoardState = SerializableTaskList[];
 
 function serializeBoard(lists: TaskList[]): BoardState {
-  return lists.map((list) => ({
+  const serialized: BoardState = lists.map((list) => ({
     id: list.id,
     header: list.header,
     tasks: list.tasks.map((t) => ({
-      ...t,
+      id: t.id,
+      header: t.header,
+      isDraft: t.isDraft,
       createdAt: t.createdAt.toISOString(),
       dueDate: t.dueDate ? t.dueDate.toISOString() : undefined,
       completedAt: t.completedAt ? t.completedAt.toISOString() : undefined,
+      priority: t.priority,
+      tags: t.tags,
+      contentPath: taskContentFile(t.id),
+      assetsDir: taskAssetsDir(t.id),
     })),
   }));
+  return serialized;
 }
 
 function deserializeBoard(data: BoardState): TaskList[] {
@@ -53,14 +77,24 @@ async function ensureRootDir(): Promise<void> {
 export async function saveBoard(lists: TaskList[]): Promise<void> {
   await ensureRootDir();
   const json = JSON.stringify(serializeBoard(lists));
-  await writeTextFile(LOAD_FILE, json, { baseDir: BaseDirectory.AppData });
+  console.log("[Storage] saveBoard -> bytes", json.length);
+  await writeTextFile(BOARD_FILE, json, { baseDir: BaseDirectory.AppData });
 }
 
 export async function loadBoard(): Promise<TaskList[] | null> {
   try {
-    const existsLoad = await exists(LOAD_FILE, { baseDir: BaseDirectory.AppData });
-    if (!existsLoad) return null;
-    const text = await readTextFile(LOAD_FILE, { baseDir: BaseDirectory.AppData });
+    // Prefer new board.json, fallback to legacy load.json
+    const hasBoard = await exists(BOARD_FILE, {
+      baseDir: BaseDirectory.AppData,
+    });
+    const path = hasBoard
+      ? BOARD_FILE
+      : (await exists(LEGACY_LOAD_FILE, { baseDir: BaseDirectory.AppData }))
+        ? LEGACY_LOAD_FILE
+        : null;
+    if (!path) return null;
+    const text = await readTextFile(path, { baseDir: BaseDirectory.AppData });
+    console.log("[Storage] loadBoard from", path, "bytes", text?.length ?? 0);
     if (!text) return null;
     const data = JSON.parse(text) as BoardState;
     return deserializeBoard(data);
@@ -69,40 +103,147 @@ export async function loadBoard(): Promise<TaskList[] | null> {
   }
 }
 
-export async function saveBoardIfChanged(lists: TaskList[], previousJson?: string): Promise<string> {
-  const json = JSON.stringify(serializeBoard(lists));
-  if (json !== previousJson) {
-    await saveBoard(lists);
-  }
-  return json;
+const CONTENTS_DIR = `${ROOT_DIR}/contents`;
+
+function taskContentDir(taskId: string): string {
+  return `${CONTENTS_DIR}/${taskId}`;
 }
 
-function formatTimestamp(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  const mm = pad(d.getMonth() + 1);
-  const dd = pad(d.getDate());
-  const hh = pad(d.getHours());
-  const mi = pad(d.getMinutes());
-  const ss = pad(d.getSeconds());
-  return `${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
+function taskContentFile(taskId: string): string {
+  return `${taskContentDir(taskId)}/content.md`;
 }
 
-async function ensureSessionsDir(): Promise<void> {
-  const hasDir = await exists(SESSIONS_DIR, { baseDir: BaseDirectory.AppData });
-  if (!hasDir) {
-    await mkdir(SESSIONS_DIR, { baseDir: BaseDirectory.AppData, recursive: true });
-  }
+function taskAssetsDir(taskId: string): string {
+  return `${taskContentDir(taskId)}/assets`;
 }
 
-export async function writeAppInitSnapshot(lists: TaskList[]): Promise<string> {
+async function ensureTaskDir(taskId: string): Promise<void> {
   await ensureRootDir();
-  await ensureSessionsDir();
-  const stamp = formatTimestamp(new Date());
-  const path = `${SESSIONS_DIR}/startup-${stamp}.json`;
-  const json = JSON.stringify(serializeBoard(lists));
-  await writeTextFile(path, json, { baseDir: BaseDirectory.AppData });
-  return path;
+  const dir = taskContentDir(taskId);
+  const hasDir = await exists(dir, { baseDir: BaseDirectory.AppData });
+  if (!hasDir) {
+    await mkdir(dir, { baseDir: BaseDirectory.AppData, recursive: true });
+  }
 }
 
+async function ensureTaskAssetsDir(taskId: string): Promise<void> {
+  await ensureTaskDir(taskId);
+  const dir = taskAssetsDir(taskId);
+  const hasDir = await exists(dir, { baseDir: BaseDirectory.AppData });
+  if (!hasDir) {
+    await mkdir(dir, { baseDir: BaseDirectory.AppData, recursive: true });
+  }
+}
 
+export async function readTaskContent(taskId: string): Promise<string | null> {
+  try {
+    const file = taskContentFile(taskId);
+    const has = await exists(file, { baseDir: BaseDirectory.AppData });
+    if (!has) return null;
+    const text = await readTextFile(file, { baseDir: BaseDirectory.AppData });
+    console.log(
+      "[Storage] readTaskContent",
+      taskId,
+      "bytes",
+      text?.length ?? 0,
+    );
+    return text;
+  } catch (_e) {
+    return null;
+  }
+}
+
+export async function writeTaskContent(
+  taskId: string,
+  content: string,
+): Promise<void> {
+  await ensureTaskDir(taskId);
+  const file = taskContentFile(taskId);
+  console.log(
+    "[Storage] writeTaskContent",
+    taskId,
+    "bytes",
+    content?.length ?? 0,
+  );
+  await writeTextFile(file, content, { baseDir: BaseDirectory.AppData });
+}
+
+export async function deleteTaskContent(taskId: string): Promise<void> {
+  try {
+    const dir = taskContentDir(taskId);
+    await remove(dir, {
+      baseDir: BaseDirectory.AppData,
+      recursive: true,
+    } as any);
+  } catch (_e) {
+    // ignore
+  }
+}
+
+function isImageNameOrType(filename: string, mimeType?: string): boolean {
+  if (mimeType && mimeType.startsWith("image/")) return true;
+  const lower = filename.toLowerCase();
+  return [
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".avif",
+    ".bmp",
+  ].some((ext) => lower.endsWith(ext));
+}
+
+function extractExtension(filename: string, defaultExt = "bin"): string {
+  const idx = filename.lastIndexOf(".");
+  if (idx !== -1 && idx < filename.length - 1) return filename.slice(idx + 1);
+  return defaultExt;
+}
+
+export async function writeTaskAsset(
+  taskId: string,
+  filename: string,
+  bytes: Uint8Array,
+  mimeType?: string,
+): Promise<{ relativePath: string; url: string; path: string }> {
+  await ensureTaskAssetsDir(taskId);
+  const assetsDir = taskAssetsDir(taskId);
+  let safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+  // Auto-name images as image-<n>.<ext>
+  if (isImageNameOrType(filename, mimeType)) {
+    const ext = extractExtension(filename, "png");
+    let maxIndex = 0;
+    try {
+      const entries = await readDir(assetsDir, {
+        baseDir: BaseDirectory.AppData,
+      });
+      for (const entry of entries) {
+        const name = entry.name || "";
+        const match = name.match(/^image-(\d+)\./i);
+        if (match) {
+          const n = parseInt(match[1], 10);
+          if (!isNaN(n)) maxIndex = Math.max(maxIndex, n);
+        }
+      }
+    } catch (_e) {
+      // ignore dir read errors
+    }
+    safeName = `image-${maxIndex + 1}.${ext}`;
+  }
+
+  const relativePath = `${assetsDir}/${safeName}`;
+  console.log(
+    "[Storage] writeTaskAsset",
+    taskId,
+    safeName,
+    "bytes",
+    bytes?.byteLength ?? 0,
+  );
+  await writeFile(relativePath, bytes, { baseDir: BaseDirectory.AppData });
+  // Build a URL that the webview can load
+  const fullPath = await join(await appDataDir(), relativePath);
+  const url = convertFileSrc(fullPath);
+  return { relativePath, url, path: fullPath };
+}

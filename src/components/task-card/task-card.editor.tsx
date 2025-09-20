@@ -83,6 +83,16 @@ export default function InlineTaskEditor(props: Props) {
         value={form.header}
         onInput={handleHeaderInput}
         autofocus
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onSubmit();
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
       />
       <textarea
         class="w-full bg-transparent text-xs text-zinc-400 placeholder-zinc-600 outline-none resize-none"

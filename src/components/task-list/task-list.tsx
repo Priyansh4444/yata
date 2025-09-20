@@ -6,7 +6,6 @@ import {
   onCleanup,
   onMount,
   createEffect,
-  JSX,
 } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import type { Task, TaskList, Tag } from "@/types";
@@ -15,15 +14,24 @@ import InlineTaskEditor from "@/components/task-card/task-card.editor";
 import { createTask } from "@/utils";
 import InlineListTitle from "@/components/task-list/task-list.title-edit";
 import TaskDetailsSheet from "@components/task-details-sheet";
+import { COMPLETED_LIST_ID } from "@/libs/dnd-helpers";
 import { createUndoRedo } from "@/libs/undo";
 import { createUndoRedoHotkeys } from "@/libs/hotkeys";
-import { SortableProvider, createSortable, maybeTransformStyle } from "@thisbeyond/solid-dnd";
+import {
+  SortableProvider,
+  createSortable,
+  maybeTransformStyle,
+  useDragDropContext,
+  type DragEventHandler,
+} from "@thisbeyond/solid-dnd";
 import SortableTaskCard from "./sortable-task-card";
+import { writeTaskContent, deleteTaskContent } from "@/libs/storage";
 
 interface KanbanListProps {
   taskList: TaskList;
   onRenameList: (name: string) => void;
   onDeleteList: () => void;
+  onTasksChange?: (tasks: Task[]) => void;
   listId: string;
   isGroupDraggable?: boolean;
 }
@@ -32,6 +40,7 @@ export default function KanbanList({
   taskList,
   onRenameList,
   onDeleteList,
+  onTasksChange,
   listId,
   isGroupDraggable = true,
 }: KanbanListProps) {
@@ -71,15 +80,34 @@ export default function KanbanList({
   function startAddNew() {
     snapshot();
     const newTask: Task = createTask("", [], undefined, { isDraft: true });
-    setTasks([newTask, ...tasks]);
+    // Use reconcile to replace the array so Solid tracks changes properly
+    setTasks(reconcile([newTask, ...tasks]));
+    notifyParent();
   }
 
-  function handleSave(index: number, updates: Partial<Task>) {
+  async function handleSave(index: number, updates: Partial<Task>) {
+    console.log(
+      "[TaskList] handleSave called for task at index",
+      index,
+      "with updates:",
+      updates,
+    );
     snapshot();
     const patch: Partial<Task> = { ...updates };
     if (patch.header !== undefined) patch.header = patch.header.trim();
     patch.isDraft = false;
+    // If content was provided on first save, persist it to the per-task file
+    if (Object.prototype.hasOwnProperty.call(patch, "content")) {
+      const id = tasks[index].id;
+      const content = (patch as Partial<Task>).content ?? "";
+      await writeTaskContent(id, content);
+    }
     setTasks(index, patch);
+    console.log("[TaskList] handleSave completed - task updated");
+    console.log(
+      "[TaskList] handleSave -> task store updated, should trigger kanban autosave",
+    );
+    notifyParent();
   }
 
   function handleCancel(index: number) {
@@ -95,9 +123,22 @@ export default function KanbanList({
   }
 
   function deleteTaskAt(index: number) {
+    const task = tasks[index];
+    console.log(
+      "[TaskList] deleteTaskAt called for task at index",
+      index,
+      "task:",
+      task?.id,
+    );
     snapshot();
     const next = tasks.filter((_, i) => i !== index);
     setTasks(reconcile(next));
+
+    // Clean up stored content for the deleted task
+    if (task) {
+      console.log("[TaskList] deleting content for task:", task.id);
+      deleteTaskContent(task.id);
+    }
 
     // If the deleted task was open, close the sheet
     if (openTaskIndex() === index) {
@@ -107,12 +148,20 @@ export default function KanbanList({
       // Adjust the open task index if a task before it was deleted
       setOpenTaskIndex(openTaskIndex()! - 1);
     }
+    console.log("[TaskList] deleteTaskAt completed");
+    notifyParent();
   }
 
   function updateOpenTask(updates: Partial<Task>) {
     const index = openTaskIndex();
     if (index === null) return;
 
+    console.log(
+      "[TaskList] updateOpenTask called for task at index",
+      index,
+      "with updates:",
+      updates,
+    );
     snapshot();
     Object.entries(updates).forEach(([key, value]) => {
       setTasks(index, key as keyof Task, value);
@@ -131,7 +180,110 @@ export default function KanbanList({
     setTasks(reconcile(taskList.tasks));
   });
 
-  const listSortable = createSortable(listId, { type: "group", disabled: !isGroupDraggable });
+  const listSortable = createSortable(listId, {
+    type: "group",
+    disabled: !isGroupDraggable,
+  });
+
+  // Only include non-draft items in SortableProvider ids to keep DOM order in sync
+  const sortableIds = createMemo(() =>
+    tasks.filter((t) => !t.isDraft).map((t) => t.id),
+  );
+
+  createEffect(() => {
+    console.debug("[DND][TaskList] sortable ids updated", {
+      listId,
+      ids: sortableIds(),
+      totalTasks: tasks.length,
+    });
+  });
+
+  // Local within-list move handling to keep array order in sync during drag
+  function moveWithinList(draggableId: string, droppableId: string | null) {
+    const fromIndex = tasks.findIndex((t) => t.id === draggableId);
+    if (fromIndex === -1) return;
+
+    // Determine target index. If hovering over group, append to end.
+    let targetIndex: number | null = null;
+    if (droppableId) {
+      const idx = tasks.findIndex((t) => t.id === droppableId);
+      if (idx !== -1) targetIndex = idx;
+    }
+
+    const next = tasks.slice();
+    const [moved] = next.splice(fromIndex, 1);
+    if (!moved) return;
+
+    let insertIndex = targetIndex ?? next.length; // append when hovering group
+    if (fromIndex < insertIndex) insertIndex = Math.max(0, insertIndex);
+    insertIndex = Math.max(0, Math.min(insertIndex, next.length));
+
+    next.splice(insertIndex, 0, moved);
+    setTasks(reconcile(next));
+  }
+
+  onMount(() => {
+    const ctx = useDragDropContext();
+    if (!ctx) return;
+    const [, actions] = ctx;
+
+    const handleOver: DragEventHandler = ({ draggable, droppable }) => {
+      if (!draggable || !droppable) return;
+      // Only handle item reordering within this list
+      const draggableType = draggable.data?.type;
+      const droppableType = droppable.data?.type;
+      const draggableGroup = draggable.data?.group;
+      const droppableGroup =
+        droppableType === "group" ? droppable.id : droppable.data?.group;
+      if (draggableType !== "item") return;
+      if (droppableGroup !== listId) return;
+      // Ignore if coming from another list; board-level will handle cross-list moves
+      if (draggableGroup && draggableGroup !== listId) return;
+
+      console.debug("[DND][TaskList] onDragOver", {
+        listId,
+        draggableId: draggable.id,
+        droppableId: droppableType === "group" ? null : droppable.id,
+        droppableType,
+      });
+
+      moveWithinList(
+        String(draggable.id),
+        droppableType === "group" ? null : String(droppable.id),
+      );
+      notifyParent();
+    };
+
+    const handleEnd: DragEventHandler = ({ draggable, droppable }) => {
+      if (!draggable || !droppable) return;
+      const draggableType = draggable.data?.type;
+      const droppableType = droppable.data?.type;
+      const draggableGroup = draggable.data?.group;
+      const droppableGroup =
+        droppableType === "group" ? droppable.id : droppable.data?.group;
+      if (draggableType !== "item") return;
+      if (droppableGroup !== listId) return;
+      if (draggableGroup && draggableGroup !== listId) return;
+
+      console.debug("[DND][TaskList] onDragEnd finalize within-list", {
+        listId,
+        draggableId: draggable.id,
+        droppableId: droppableType === "group" ? null : droppable.id,
+      });
+      notifyParent();
+    };
+
+    actions.onDragOver(handleOver);
+    actions.onDragEnd(handleEnd);
+  });
+
+  function notifyParent() {
+    try {
+      onTasksChange?.(tasks.map((t) => ({ ...t })));
+    } catch (_e) {
+      // ignore
+    }
+  }
 
   return (
     <section
@@ -175,9 +327,21 @@ export default function KanbanList({
           </span>
           <button
             type="button"
-            class="h-7 w-7 grid place-items-center rounded-md border border-white/10 text-zinc-400/80 hover:text-rose-200 hover:border-rose-400/40 hover:bg-rose-500/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] transition"
+            class="h-7 w-7 grid place-items-center rounded-md border border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-red-500/20 hover:border-red-500/30 bg-white/5 transition-colors"
             title="Delete list"
-            onClick={onDeleteList}
+            onClick={() => {
+              if (tasks.length > 0) {
+                if (
+                  confirm(
+                    `Are you sure you want to delete "${taskList.header}" and all ${tasks.length} tasks?`,
+                  )
+                ) {
+                  onDeleteList();
+                }
+              } else {
+                onDeleteList();
+              }
+            }}
           >
             <span class="relative inline-flex">
               <svg
@@ -219,7 +383,7 @@ export default function KanbanList({
             </div>
           }
         >
-          <SortableProvider ids={tasks.map((t) => t.id)}>
+          <SortableProvider ids={sortableIds()}>
             <For each={tasks}>
               {(task, i) => (
                 <>
@@ -264,10 +428,10 @@ export default function KanbanList({
               disabled:opacity-50 disabled:cursor-not-allowed
             "
           type="button"
-          disabled={hasDraft()}
+          disabled={hasDraft() || listId === COMPLETED_LIST_ID}
           onClick={startAddNew}
         >
-          + Add task
+          {listId === COMPLETED_LIST_ID ? "Completed list" : "+ Add task"}
         </button>
       </div>
 

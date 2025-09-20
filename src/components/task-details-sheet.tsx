@@ -24,6 +24,7 @@ import {
 import { cn } from "@/libs/cn";
 import TagPicker from "@components/tags/tag-picker";
 import RichEditor from "./tiptap-editor/rich-editor";
+import { readTaskContent, writeTaskContent } from "@/libs/storage";
 
 type PriorityUiProps = {
   sheetBorderClass: string;
@@ -83,26 +84,40 @@ export default function TaskDetailsSheet(
     toLocalDateInputString(props.task?.dueDate) ?? "",
   );
 
-  // Sync local fields when the opened task changes
+  async function loadTaskContent(taskId: string) {
+    const text = (await readTaskContent(taskId)) ?? "";
+    setContent((prev) => (prev?.length ? prev : text));
+    if (props.onUpdate) {
+      props.onUpdate({ content: text });
+    }
+  }
+
   createEffect(
     on(
       () => props.task?.id,
       () => {
         setTitle(props.task?.header ?? "");
-        setContent(props.task?.content ?? "");
         setPriority(props.task?.priority);
         setDueStr(toLocalDateInputString(props.task?.dueDate) ?? "");
         setEditingTags(false);
+        setContent(props.task?.content ?? "");
+        const id = props.task?.id;
+        if (id) {
+          void loadTaskContent(id);
+        }
       },
       { defer: true },
     ),
   );
 
-  // Lightweight debounce to avoid re-rendering the whole board on every keystroke
   let debouncedId: ReturnType<typeof setTimeout> | null = null;
   function debounceUpdate(partial: Partial<Task>, delay = 120) {
     if (debouncedId) clearTimeout(debouncedId);
-    debouncedId = setTimeout(() => props.onUpdate?.(partial), delay);
+    debouncedId = setTimeout(() => {
+      if (props.onUpdate) {
+        props.onUpdate(partial);
+      }
+    }, delay);
   }
   onCleanup(() => {
     if (debouncedId) clearTimeout(debouncedId);
@@ -243,18 +258,27 @@ export default function TaskDetailsSheet(
             <Show when={editingTags()}>
               <TagPicker
                 value={(props.task?.tags ?? []) as Tag[]}
-                onChange={(tags) => props.onUpdate?.({ tags })}
+                onChange={(tags) => {
+                  if (props.onUpdate) props.onUpdate({ tags });
+                }}
                 suggestions={props.existingTags}
               />
             </Show>
           </div>
-          {/* Divider line below tags */}
           <div class="border-t border-white/10" />
           <div class="w-full">
-            <RichEditor value={content()} onChange={(val) => {
-              setContent(val);
-              debounceUpdate({ content: val });
-            }} />
+            <RichEditor
+              taskId={props.task?.id}
+              value={content()}
+              onChange={(val) => {
+                setContent(val);
+                const id = props.task?.id;
+                if (id) {
+                  writeTaskContent(id, val);
+                }
+                debounceUpdate({ content: val });
+              }}
+            />
           </div>
         </div>
       </SheetContent>
