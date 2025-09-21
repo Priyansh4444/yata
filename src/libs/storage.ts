@@ -17,13 +17,24 @@ const LEGACY_LOAD_FILE = `${ROOT_DIR}/load.json`;
 
 type SerializableTask = Omit<
   Task,
-  "createdAt" | "dueDate" | "completedAt" | "content"
+  | "createdAt"
+  | "dueDate"
+  | "completedAt"
+  | "content"
+  | "scheduledAt"
+  | "timeLogs"
 > & {
   createdAt: string;
   dueDate?: string;
   completedAt?: string;
   contentPath?: string;
   assetsDir?: string;
+  scheduledAt?: string;
+  timeLogs?: {
+    start: string;
+    end?: string;
+    kind?: "focus" | "pomodoro-work" | "pomodoro-break";
+  }[];
 };
 
 type SerializableTaskList = {
@@ -47,6 +58,11 @@ function serializeBoard(lists: TaskList[]): BoardState {
       completedAt: t.completedAt ? t.completedAt.toISOString() : undefined,
       priority: t.priority,
       tags: t.tags,
+      estimatedSeconds: t.estimatedSeconds,
+      timeSpentSeconds: t.timeSpentSeconds,
+      timeLogs: t.timeLogs,
+      pomodoro: t.pomodoro,
+      scheduledAt: t.scheduledAt ? t.scheduledAt.toISOString() : undefined,
       contentPath: taskContentFile(t.id),
       assetsDir: taskAssetsDir(t.id),
     })),
@@ -63,6 +79,7 @@ function deserializeBoard(data: BoardState): TaskList[] {
       createdAt: new Date(t.createdAt),
       dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
       completedAt: t.completedAt ? new Date(t.completedAt) : undefined,
+      scheduledAt: t.scheduledAt ? new Date(t.scheduledAt) : undefined,
     })),
   }));
 }
@@ -174,7 +191,7 @@ export async function deleteTaskContent(taskId: string): Promise<void> {
     await remove(dir, {
       baseDir: BaseDirectory.AppData,
       recursive: true,
-    } as any);
+    });
   } catch (_e) {
     // ignore
   }

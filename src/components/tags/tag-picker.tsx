@@ -47,7 +47,12 @@ export default function TagPicker(props: Props) {
           type="color"
           class="h-7 w-7 rounded border border-white/10 bg-transparent p-0"
           value={state.color}
-          onInput={(e) => setState("color", e.currentTarget.value as HexColor)}
+          onInput={(e) => {
+            const color = e.currentTarget.value;
+            if (color.startsWith("#")) {
+              setState("color", color as HexColor);
+            }
+          }}
         />
         <button
           type="button"
@@ -72,7 +77,9 @@ export default function TagPicker(props: Props) {
               onClick={() => removeTag(tag.label)}
               title={`Remove ${tag.label}`}
             >
-              <span class="-ml-0.5 mr-0.5 h-4 w-4 grid place-items-center rounded">×</span>
+              <span class="-ml-0.5 mr-0.5 h-4 w-4 grid place-items-center rounded">
+                ×
+              </span>
               <span>{tag.label}</span>
             </button>
           )}
@@ -84,16 +91,14 @@ export default function TagPicker(props: Props) {
           <p class="text-[11px] text-zinc-500 mb-1">Suggestions</p>
           <div class="flex flex-wrap gap-1.5">
             <For
-              each={
-                [
-                  ...new Map(
-                    (props.suggestions ?? []).map((t) => [
-                      t.label.toLowerCase(),
-                      t,
-                    ]),
-                  ).values(),
-                ] as Tag[]
-              }
+              each={Array.from(
+                new Map(
+                  (props.suggestions ?? []).map((tag) => [
+                    tag.label.toLowerCase(),
+                    tag,
+                  ]),
+                ).values(),
+              )}
             >
               {(t) => (
                 <button

@@ -1,16 +1,28 @@
 import type { Id } from "@thisbeyond/solid-dnd";
-import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, type DragEventHandler, type Draggable, type Droppable } from "@thisbeyond/solid-dnd";
-import { For, Show, createSignal, onMount } from "solid-js";
+import {
+  DragDropProvider,
+  DragDropSensors,
+  DragOverlay,
+  SortableProvider,
+  type DragEventHandler,
+  type Draggable,
+  type Droppable,
+} from "@thisbeyond/solid-dnd";
+import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import KanbanList from "@/components/task-list/task-list";
 import NewListCard from "@/components/task-list/task-list.create";
 import type { Task, TaskList } from "@/types";
 import { createTaskList } from "@/utils";
 import { loadBoard, saveBoard } from "@/libs/storage";
-import { boardCollisionDetector, computeMovedLists, isGroup } from "./kanban-board/dnd";
+import {
+  boardCollisionDetector,
+  computeMovedLists,
+  isGroup,
+} from "./kanban-board/dnd";
 import { computeInsertIndexForNewList } from "./kanban-board/insert";
 import { COMPLETED_LIST_ID } from "@/libs/dnd-helpers";
-
+import { watchBoardFile, type BoardWatchHandle } from "@/libs/board";
 
 export default function KanbanBoard() {
   const [lists, setLists] = createStore<TaskList[]>([]);
@@ -22,15 +34,39 @@ export default function KanbanBoard() {
       const hasCompleted = loaded.some((l) => l.id === COMPLETED_LIST_ID);
       const next = hasCompleted
         ? loaded
-        : [...loaded, { id: COMPLETED_LIST_ID, header: "Completed", tasks: [] }];
+        : [
+            ...loaded,
+            { id: COMPLETED_LIST_ID, header: "Completed", tasks: [] },
+          ];
       setLists(reconcile(next));
       if (next !== loaded) await saveBoard(next);
     } else {
       // Start with Completed column by default
-      const initial = [{ id: COMPLETED_LIST_ID, header: "Completed", tasks: [] }];
+      const initial = [
+        { id: COMPLETED_LIST_ID, header: "Completed", tasks: [] },
+      ];
       setLists(initial);
       await saveBoard(initial);
     }
+  });
+
+  // Watch external changes to board.json and refresh state
+  onMount(() => {
+    let BoardHandler: BoardWatchHandle = null;
+
+    async function startWatchingBoardFile() {
+      BoardHandler = await watchBoardFile(async () => {
+        const fresh = await loadBoard();
+        if (!fresh) return;
+        const same = JSON.stringify(fresh) === JSON.stringify(lists);
+        if (!same) setLists(reconcile(fresh));
+      });
+    }
+
+    startWatchingBoardFile();
+    onCleanup(() => {
+      void BoardHandler?.close();
+    });
   });
 
   const listIds = () => lists.map((l) => l.id);
@@ -73,7 +109,9 @@ export default function KanbanBoard() {
     await saveBoard(next);
   }
 
-  function findTask(taskId: Id): { listIndex: number; taskIndex: number } | null {
+  function findTask(
+    taskId: Id,
+  ): { listIndex: number; taskIndex: number } | null {
     for (let li = 0; li < lists.length; li++) {
       const ti = lists[li].tasks.findIndex((t) => t.id === taskId);
       if (ti !== -1) return { listIndex: li, taskIndex: ti };
@@ -104,7 +142,11 @@ export default function KanbanBoard() {
 
   return (
     <div class="kanban-board h-full flex flex-row gap-6 overflow-x-auto pb-4 scrollbar-black">
-      <DragDropProvider onDragOver={onDragOver} onDragEnd={onDragEnd} collisionDetector={collisionDetector}>
+      <DragDropProvider
+        onDragOver={onDragOver}
+        onDragEnd={onDragEnd}
+        collisionDetector={collisionDetector}
+      >
         <DragDropSensors />
         <div class="columns flex flex-row gap-6 items-start">
           <SortableProvider ids={listIds()}>
@@ -133,7 +175,10 @@ export default function KanbanBoard() {
           </Show>
           <Show when={addingList()}>
             <div class="min-w-[320px] w-[360px] max-w-[400px]">
-              <NewListCard onAdd={addList} onCancel={() => setAddingList(false)} />
+              <NewListCard
+                onAdd={addList}
+                onCancel={() => setAddingList(false)}
+              />
             </div>
           </Show>
         </div>
@@ -146,10 +191,16 @@ export default function KanbanBoard() {
               if (!list) return null;
               return (
                 <div class="column bg-black/40 border border-white/10 rounded-2xl">
-                  <div class="px-4 py-3 border-b border-white/10">{list.header}</div>
+                  <div class="px-4 py-3 border-b border-white/10">
+                    {list.header}
+                  </div>
                   <div class="p-3 space-y-3">
                     <For each={list.tasks}>
-                      {(t) => <div class="rounded-xl px-4 py-2 bg-black/30 border border-white/10 text-zinc-200">{t.header}</div>}
+                      {(t) => (
+                        <div class="rounded-xl px-4 py-2 bg-black/30 border border-white/10 text-zinc-200">
+                          {t.header}
+                        </div>
+                      )}
                     </For>
                   </div>
                 </div>
@@ -158,7 +209,11 @@ export default function KanbanBoard() {
             const loc = findTask(draggable.id);
             if (!loc) return null;
             const task = lists[loc.listIndex].tasks[loc.taskIndex];
-            return <div class="rounded-xl px-4 py-2 bg-black/60 border border-white/10 text-zinc-200 max-w-[360px]">{task.header}</div>;
+            return (
+              <div class="rounded-xl px-4 py-2 bg-black/60 border border-white/10 text-zinc-200 max-w-[360px]">
+                {task.header}
+              </div>
+            );
           }}
         </DragOverlay>
       </DragDropProvider>

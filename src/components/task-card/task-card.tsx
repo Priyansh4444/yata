@@ -29,6 +29,12 @@ export default function TaskCard({
   );
 
   const priorityProps = createMemo(() => getPriorityProps(task.priority));
+  const estMin = createMemo(() =>
+    Math.round((task.estimatedSeconds || 0) / 60 || 0),
+  );
+  const doneMin = createMemo(() =>
+    Math.round((task.timeSpentSeconds || 0) / 60 || 0),
+  );
 
   function handleAddTagsClick(event: MouseEvent) {
     event.stopPropagation();
@@ -41,11 +47,10 @@ export default function TaskCard({
   }
 
   function shouldIgnoreTarget(target: EventTarget | null): boolean {
-    const el = target as HTMLElement | null;
-    if (!el) return false;
+    if (!target || !(target instanceof HTMLElement)) return false;
 
-    const tag = el.tagName?.toLowerCase() || "";
-    if (el.isContentEditable) return true;
+    const tag = target.tagName?.toLowerCase() || "";
+    if (target.isContentEditable) return true;
 
     return (
       tag === "input" ||
@@ -64,7 +69,9 @@ export default function TaskCard({
   }
 
   function handleMouseEnter(event: MouseEvent) {
-    const target = event.currentTarget as HTMLElement;
+    if (!(event.currentTarget instanceof HTMLElement)) return;
+
+    const target = event.currentTarget;
     // Only focus if not already focused
     if (document.activeElement !== target) {
       target.focus();
@@ -104,6 +111,8 @@ export default function TaskCard({
             )}
           >
             {due() && <span>Due {due()!.toLocaleDateString()}</span>}
+            {estMin() > 0 && <span>Est {estMin()}m</span>}
+            {doneMin() > 0 && <span>Done {doneMin()}m</span>}
             {isDraft() && <span class="text-amber-300">Draft</span>}
           </div>
         </div>

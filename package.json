@@ -17,10 +17,9 @@
     "@kobalte/core": "^0.13.11",
     "@solidjs/router": "^0.15.3",
     "@tailwindcss/vite": "^4.1.13",
-    "@tauri-apps/api": "^2.8.0",
-    "@tauri-apps/plugin-fs": "~2",
-    "@tauri-apps/plugin-log": "~2.6.0",
-    "@tauri-apps/plugin-opener": "^2.5.0",
+    "@tauri-apps/api": "^2.4.2",
+    "@tauri-apps/plugin-fs": "^2.4.2",
+    "@tauri-apps/plugin-opener": "^2.4.2",
     "@thisbeyond/solid-dnd": "^0.7.5",
     "@tiptap/core": "^3.4.1",
     "@tiptap/extension-code-block-lowlight": "^3.4.1",
@@ -45,7 +44,7 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
-    "@tauri-apps/cli": "^2.8.4",
+    "@tauri-apps/cli": "^2.4.2",
     "typescript": "~5.6.3",
     "vite-plugin-solid": "^2.11.8"
   }

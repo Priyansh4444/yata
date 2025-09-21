@@ -2,15 +2,22 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": [
-    "main"
-  ],
+  "windows": ["*"],
   "permissions": [
     "core:default",
     "core:webview:allow-create-webview-window",
+    "core:window:allow-create",
+    "core:window:allow-set-decorations",
+    "core:window:allow-set-focus",
+    "core:window:allow-set-resizable",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-size",
+    "core:window:allow-set-title",
+    "core:window:allow-show",
     "opener:default",
-    "log:default",
     "fs:default",
+    "fs:allow-watch",
+    "fs:allow-unwatch",
     "fs:allow-exists",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
@@ -22,9 +29,7 @@
     "fs:allow-appdata-write-recursive",
     {
       "identifier": "fs:scope",
-      "allow": [
-        { "baseDir": "AppData", "path": "boards/**" }
-      ]
+      "allow": [{ "baseDir": "AppData", "path": "boards/**" }]
     }
   ]
 }

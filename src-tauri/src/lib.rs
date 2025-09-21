@@ -10,7 +10,6 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_log::Builder::new().build())
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
 

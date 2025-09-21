@@ -19,6 +19,25 @@ export type Task = {
   priority?: Option<Priority>;
   content?: Option<string>;
   tags?: Option<Tag[]>;
+  // Estimated time in seconds for completing the task
+  estimatedSeconds?: Option<number>;
+  // Aggregated time spent in seconds (derived from timeLogs for convenience)
+  timeSpentSeconds?: Option<number>;
+  // Time logs capturing focus sessions for this task
+  timeLogs?: Option<
+    {
+      start: string; // ISO string
+      end?: string; // ISO string
+      kind?: "focus" | "pomodoro-work" | "pomodoro-break";
+    }[]
+  >;
+  // Optional per-task Pomodoro configuration
+  pomodoro?: Option<{
+    workMinutes: number;
+    breakMinutes: number;
+  }>;
+  // Optional scheduled datetime for this task
+  scheduledAt?: Option<Date>;
 };
 
 export type TaskList = {
@@ -33,4 +52,5 @@ export type MenuItem = {
   href: string;
   gradient: string;
   iconColor: string;
+  onClick?: () => void;
 };

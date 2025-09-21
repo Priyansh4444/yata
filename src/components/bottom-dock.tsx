@@ -1,8 +1,12 @@
 import type { MenuItem } from "@/types";
+import { openWindow } from "@/libs/window";
 import { animate, createSpring, eases, utils } from "animejs";
 import { For, onMount } from "solid-js";
 import HomeIcon from "./icons/home-icon";
 import SettingsIcon from "./icons/settings-icon";
+import TimerIcon from "./icons/timer-icon";
+import FocusIcon from "./icons/focus-icon";
+import ReportsIcon from "./icons/reports-icon";
 
 // Potential changes to WAAPI if needed to make initial page load better: https://animejs.com/documentation/web-animation-api/when-to-use-waapi
 
@@ -13,8 +17,74 @@ export default function BottomDock() {
       label: "Home",
       href: "/",
       gradient:
+        "radial-gradient(circle, rgba(59,130,246,0.18) 0%, rgba(37,99,235,0.10) 50%, rgba(29,78,216,0) 100%)",
+      iconColor: "group-hover:text-blue-400",
+    },
+    {
+      icon: FocusIcon,
+      label: "Focus",
+      href: "/focus",
+      gradient:
+        "radial-gradient(circle, rgba(147,51,234,0.18) 0%, rgba(126,34,206,0.10) 50%, rgba(88,28,135,0) 100%)",
+      iconColor: "group-hover:text-purple-400",
+      onClick: () =>
+        openWindow({
+          label: `focus-${Date.now()}`,
+          title: "Focus",
+          url: "/focus",
+          width: 520,
+          height: 360,
+          alwaysOnTop: true,
+        }),
+    },
+    {
+      icon: TimerIcon,
+      label: "Timer",
+      href: "/timer",
+      gradient:
+        "radial-gradient(circle, rgba(239,68,68,0.18) 0%, rgba(220,38,38,0.10) 50%, rgba(153,27,27,0) 100%)",
+      iconColor: "group-hover:text-rose-400",
+      onClick: () =>
+        openWindow({
+          label: `timer-${Date.now()}`,
+          title: "Timer",
+          url: "/timer",
+          width: 420,
+          height: 260,
+          alwaysOnTop: true,
+        }),
+    },
+    {
+      icon: ReportsIcon,
+      label: "Reports",
+      href: "/reports",
+      gradient:
+        "radial-gradient(circle, rgba(34,197,94,0.18) 0%, rgba(22,163,74,0.10) 50%, rgba(21,128,61,0) 100%)",
+      iconColor: "group-hover:text-emerald-400",
+      onClick: () =>
+        openWindow({
+          label: `reports-${Date.now()}`,
+          title: "Reports",
+          url: "/reports",
+          width: 800,
+          height: 640,
+        }),
+    },
+    {
+      icon: HomeIcon,
+      label: "Schedule",
+      href: "/schedule",
+      gradient:
         "radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.06) 50%, rgba(29,78,216,0) 100%)",
       iconColor: "group-hover:text-blue-400",
+      onClick: () =>
+        openWindow({
+          label: `schedule-${Date.now()}`,
+          title: "Schedule",
+          url: "/schedule",
+          width: 720,
+          height: 540,
+        }),
     },
     {
       icon: SettingsIcon,
@@ -58,6 +128,12 @@ export default function BottomDock() {
                 {/* Front face of the button */}
                 <a
                   href={item.href}
+                  onClick={(e) => {
+                    if (item.onClick) {
+                      e.preventDefault();
+                      item.onClick();
+                    }
+                  }}
                   class="nav-item flex items-center gap-2 px-4 py-2 relative z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors duration-500 rounded-xl"
                 >
                   <span
@@ -71,6 +147,12 @@ export default function BottomDock() {
                 {/* Back face of the button */}
                 <a
                   href={item.href}
+                  onClick={(e) => {
+                    if (item.onClick) {
+                      e.preventDefault();
+                      item.onClick();
+                    }
+                  }}
                   class="nav-item-back flex items-center gap-2 px-4 py-2 absolute inset-0 z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
                 >
                   <span

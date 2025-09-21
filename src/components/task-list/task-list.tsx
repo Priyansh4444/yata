@@ -99,7 +99,7 @@ export default function KanbanList({
     // If content was provided on first save, persist it to the per-task file
     if (Object.prototype.hasOwnProperty.call(patch, "content")) {
       const id = tasks[index].id;
-      const content = (patch as Partial<Task>).content ?? "";
+      const content = patch.content ?? "";
       await writeTaskContent(id, content);
     }
     setTasks(index, patch);
@@ -163,9 +163,11 @@ export default function KanbanList({
       updates,
     );
     snapshot();
-    Object.entries(updates).forEach(([key, value]) => {
-      setTasks(index, key as keyof Task, value);
-    });
+    (Object.entries(updates) as [keyof Task, Task[keyof Task]][]).forEach(
+      ([key, value]) => {
+        setTasks(index, key, value as never);
+      },
+    );
   }
 
   const hotkeys = createUndoRedoHotkeys(

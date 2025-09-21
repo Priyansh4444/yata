@@ -31,7 +31,7 @@ export default function InlineTaskEditor(props: Props) {
   const [form, setForm] = createStore<FormState>({
     header: initial?.header ?? "",
     content: initial?.content,
-    tags: (initial?.tags ?? []) as Tag[],
+    tags: initial?.tags ?? [],
     priority: initial?.priority,
     dueDate: toLocalDateInputString(initial?.dueDate),
   });
@@ -67,7 +67,8 @@ export default function InlineTaskEditor(props: Props) {
     const updates: Partial<Task> = {};
     const header = form.header.trim();
     if (header) updates.header = header;
-    if (form.content && form.content.trim()) updates.content = form.content.trim();
+    if (form.content && form.content.trim())
+      updates.content = form.content.trim();
     if (form.tags && form.tags.length > 0) updates.tags = form.tags;
     if (form.priority !== undefined) updates.priority = form.priority;
     const dueDate = parseLocalDateInput(form.dueDate);
@@ -119,8 +120,7 @@ export default function InlineTaskEditor(props: Props) {
           <SelectTrigger class="min-w-[120px] bg-transparent text-xs text-white">
             <span class="opacity-80">
               {form.priority
-                ? (form.priority as string).charAt(0).toUpperCase() +
-                  (form.priority as string).slice(1)
+                ? form.priority.charAt(0).toUpperCase() + form.priority.slice(1)
                 : "Priority"}
             </span>
           </SelectTrigger>

@@ -83,6 +83,12 @@ export default function TaskDetailsSheet(
   const [dueStr, setDueStr] = createSignal<string>(
     toLocalDateInputString(props.task?.dueDate) ?? "",
   );
+  const [scheduledStr, setScheduledStr] = createSignal<string>(
+    toLocalDateInputString(props.task?.scheduledAt) ?? "",
+  );
+  const [estimateMin, setEstimateMin] = createSignal<number>(
+    Math.round((props.task?.estimatedSeconds || 0) / 60 || 0),
+  );
 
   async function loadTaskContent(taskId: string) {
     const text = (await readTaskContent(taskId)) ?? "";
@@ -105,6 +111,10 @@ export default function TaskDetailsSheet(
         if (id) {
           void loadTaskContent(id);
         }
+        setScheduledStr(toLocalDateInputString(props.task?.scheduledAt) ?? "");
+        setEstimateMin(
+          Math.round((props.task?.estimatedSeconds || 0) / 60 || 0),
+        );
       },
       { defer: true },
     ),
@@ -186,7 +196,8 @@ export default function TaskDetailsSheet(
                 options={["", "low", "medium", "high"]}
                 value={priority() ?? ""}
                 onChange={(value) => {
-                  const v = (value || undefined) as Option<Priority>;
+                  const v: Option<Priority> =
+                    (value as Option<Priority>) || undefined;
                   setPriority(v);
                   debounceUpdate({ priority: v });
                 }}
@@ -219,6 +230,34 @@ export default function TaskDetailsSheet(
                   debounceUpdate({ dueDate: parseLocalDateInput(val) });
                 }}
               />
+              <input
+                type="date"
+                class="bg-transparent text-xs text-zinc-300 border border-white/10 rounded-md px-2 py-1"
+                value={scheduledStr()}
+                onInput={(e) => {
+                  const val = e.currentTarget.value || undefined;
+                  setScheduledStr(val ?? "");
+                  debounceUpdate({ scheduledAt: parseLocalDateInput(val) });
+                }}
+                title="Scheduled date"
+              />
+              <div class="flex items-center gap-1 text-xs text-zinc-300">
+                <input
+                  type="number"
+                  min="0"
+                  class="w-16 bg-transparent text-xs text-zinc-300 border border-white/10 rounded-md px-2 py-1"
+                  value={estimateMin()}
+                  onInput={(e) => {
+                    const n = Math.max(
+                      0,
+                      parseInt(e.currentTarget.value || "0", 10) || 0,
+                    );
+                    setEstimateMin(n);
+                    debounceUpdate({ estimatedSeconds: n * 60 });
+                  }}
+                />
+                <span>min est</span>
+              </div>
             </div>
           </div>
           <div class="flex flex-col gap-2">
@@ -257,7 +296,7 @@ export default function TaskDetailsSheet(
             </div>
             <Show when={editingTags()}>
               <TagPicker
-                value={(props.task?.tags ?? []) as Tag[]}
+                value={props.task?.tags ?? []}
                 onChange={(tags) => {
                   if (props.onUpdate) props.onUpdate({ tags });
                 }}

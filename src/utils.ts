@@ -11,6 +11,8 @@ function createTask(
     dueDate?: Date;
     isDraft?: boolean;
     completedAt?: Date;
+    estimatedMinutes?: number;
+    scheduledAt?: Date;
   },
 ): Task {
   const normalizedTags = (tags ?? []).map((t) =>
@@ -19,7 +21,9 @@ function createTask(
       : { ...t, color: (t.color ?? DEFAULT_TAG_COLOR) as HexColor },
   );
   const dueDate = options?.dueDate ? new Date(options.dueDate) : undefined;
-  const completedAt = options?.completedAt ? new Date(options.completedAt) : undefined;
+  const completedAt = options?.completedAt
+    ? new Date(options.completedAt)
+    : undefined;
   return {
     id: generateUID(),
     header: name,
@@ -30,6 +34,12 @@ function createTask(
     priority: options?.priority,
     content,
     tags: normalizedTags,
+    estimatedSeconds: options?.estimatedMinutes
+      ? options.estimatedMinutes * 60
+      : undefined,
+    timeSpentSeconds: 0,
+    timeLogs: [],
+    scheduledAt: options?.scheduledAt,
   };
 }
 

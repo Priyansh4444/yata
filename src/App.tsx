@@ -5,6 +5,10 @@ import KanbanBoard from "@components/kanban-board";
 import { Route, Router } from "@solidjs/router";
 import SettingsPage from "@/pages/settings-page";
 import { Index } from "solid-js";
+import FocusPage from "./pages/focus-page";
+import TimerPage from "./pages/timer-page";
+import ReportsPage from "./pages/reports-page";
+import SchedulePage from "./pages/schedule-page";
 
 function App() {
   const routes = [
@@ -13,6 +17,10 @@ function App() {
       path: "/settings",
       component: SettingsPage,
     },
+    { path: "/focus", component: FocusPage },
+    { path: "/timer", component: TimerPage },
+    { path: "/reports", component: ReportsPage },
+    { path: "/schedule", component: SchedulePage },
   ];
 
   return (
