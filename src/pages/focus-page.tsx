@@ -3,7 +3,7 @@ import { loadBoard, saveBoard } from "@/libs/storage";
 import type { TaskList } from "@/types";
 import { openWindow } from "@/libs/window";
 import MiniShell from "@/components/mini/mini-shell";
-import MiniPicker from "@/components/mini/mini-picker";
+import MiniPicker, { type Item } from "@/components/mini/mini-picker";
 import MiniProgress from "@/components/mini/mini-progress";
 import MiniActions, { MiniButton } from "@/components/mini/mini-actions";
 import { moveTaskToCompleted } from "@/libs/board";
@@ -30,15 +30,15 @@ export default function FocusPage() {
     return null;
   };
 
-  const allTasks = createMemo(() => {
-    const items: { id: string; header: string; list: string }[] = [];
+  const allTasks = createMemo((): Item[] => {
+    const items: Item[] = [];
     for (const list of lists()) {
       for (const task of list.tasks) {
         if (task.isDraft) continue;
         items.push({
           id: task.id,
-          header: task.header || "Untitled",
-          list: list.header,
+          label: task.header || "Untitled",
+          meta: list.header,
         });
       }
     }
@@ -58,11 +58,7 @@ export default function FocusPage() {
     <MiniShell>
       <div class="space-y-3">
         <MiniPicker
-          items={filtered().map((task) => ({
-            id: task.id,
-            label: task.header,
-            meta: task.list,
-          }))}
+          items={filtered()}
           value={focusedTaskId()}
           onChange={(id) => {
             setFocusedTaskId(id);

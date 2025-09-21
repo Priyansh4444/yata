@@ -4,16 +4,14 @@ import {
   onCleanup,
   onMount,
   Show,
-  createEffect,
 } from "solid-js";
 import { loadBoard, saveBoard } from "@/libs/storage";
 import type { Task, TaskList } from "@/types";
 import MiniShell from "@/components/mini/mini-shell";
-import MiniPicker from "@/components/mini/mini-picker";
+import MiniPicker, { type Item } from "@/components/mini/mini-picker";
 import MiniProgress from "@/components/mini/mini-progress";
 import MiniActions, { MiniButton } from "@/components/mini/mini-actions";
 import { moveTaskToCompleted } from "@/libs/board";
-import type { Item } from "@/components/mini/mini-picker";
 
 type TimerMode = "pomodoro-work" | "pomodoro-break" | "focus";
 
@@ -24,8 +22,6 @@ interface TimerState {
   workMinutes: number;
   breakMinutes: number;
 }
-
-type TaskItem = Item;
 
 // Time formatting utilities
 const TIME_CONSTANTS = {
@@ -134,7 +130,7 @@ export default function TimerPage() {
   const timer = createTimer();
 
   // Computed values
-  const allTasks = createMemo((): TaskItem[] => {
+  const allTasks = createMemo((): Item[] => {
     return lists().flatMap((list) =>
       list.tasks
         .filter((task) => !task.isDraft)
@@ -285,24 +281,24 @@ export default function TimerPage() {
     const updatedLists = moveTaskToCompleted(lists(), task.id);
     await saveBoard(updatedLists);
     setLists(updatedLists);
-    setSelectedTask(null);
   }
 
   // Initialization
   onMount(async () => {
     const board = await loadBoard();
+    const { taskId, mode } = getUrlParams();
+
     if (board) {
       setLists(board);
-    }
 
-    const { taskId, mode } = getUrlParams();
+      // Only try to select task after board data is loaded
+      if (taskId) {
+        selectTask(taskId);
+      }
+    }
 
     if (isValidTimerMode(mode)) {
       setTimerState((prev) => ({ ...prev, mode }));
-    }
-
-    if (taskId) {
-      selectTask(taskId);
     }
   });
 
@@ -311,35 +307,25 @@ export default function TimerPage() {
     timer.cleanup();
   });
 
-  // Auto-save when task changes
-  createEffect(() => {
-    const task = selectedTask();
-    if (task) {
-      saveBoard(lists());
-    }
-  });
-
-  const state = timerState();
-  const task = selectedTask();
 
   return (
     <MiniShell title="Timer">
       <div class="space-y-3 text-center">
         <MiniPicker
           items={allTasks()}
-          value={task?.id ?? null}
+          value={selectedTask()?.id ?? null}
           onChange={(id) => id && selectTask(id)}
-          placeholder="Search tasks or lists..."
+          placeholder="Type to search tasks, then press Enter or use dropdown..."
         />
 
         <Show
-          when={task}
+          when={selectedTask()}
           fallback={<div class="text-white/70">No task chosen.</div>}
         >
-          <div class="text-xs opacity-90">{task!.header}</div>
+          <div class="text-xs opacity-90">{selectedTask()!.header}</div>
 
           <div class="text-5xl font-mono tracking-widest text-white">
-            {formatTime(state.remaining)}
+            {formatTime(timerState().remaining)}
           </div>
 
           <MiniProgress value={progressValue()} />
@@ -347,23 +333,23 @@ export default function TimerPage() {
           <div class="flex items-center justify-center gap-2 text-xs text-white/80">
             <MiniButton onClick={setPomodoroMode}>Pomodoro</MiniButton>
             <span>
-              Work {state.workMinutes}m · Break {state.breakMinutes}m
+              Work {timerState().workMinutes}m · Break {timerState().breakMinutes}m
             </span>
           </div>
 
           <MiniActions>
-            <MiniButton onClick={startTimer} disabled={state.isRunning}>
+            <MiniButton onClick={startTimer} disabled={timerState().isRunning}>
               Start
             </MiniButton>
-            <MiniButton onClick={stopTimer} disabled={!state.isRunning}>
+            <MiniButton onClick={stopTimer} disabled={!timerState().isRunning}>
               Stop
             </MiniButton>
             <MiniButton onClick={completeTask}>Move to Completed</MiniButton>
           </MiniActions>
 
           <div class="text-xs opacity-80">
-            Est: {secondsToMinutes(task!.estimatedSeconds || 0)} min · Done:{" "}
-            {secondsToMinutes(task!.timeSpentSeconds || 0)} min
+            Est: {secondsToMinutes(selectedTask()!.estimatedSeconds || 0)} min · Done: {" "}
+            {secondsToMinutes(selectedTask()!.timeSpentSeconds || 0)} min
           </div>
         </Show>
       </div>
