@@ -31,7 +31,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: "bun" # Set this to npm, yarn, pnpm, or bun.
+          # Removed caching for bun as it is not supported.
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable # Set this to dtolnay/rust-toolchain@nightly
@@ -44,13 +44,7 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
-      - name: Cache bun dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.bun
-          key: ${{ matrix.cache-key }}
-          restore-keys: |
-            bun-cache-${{ runner.os }}-
+      # Removed manual caching for bun dependencies as it is not supported.
 
       - name: install frontend dependencies
 
