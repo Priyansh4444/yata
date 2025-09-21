@@ -44,8 +44,18 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
+      - name: Cache bun dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.bun
+          key: ${{ matrix.cache-key }}
+          restore-keys: |
+            bun-cache-${{ runner.os }}-
+
       - name: install frontend dependencies
+
         # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
+
         run: bun install # change this to bun, npm, or pnpm depending on which one you use.
 
       - uses: tauri-apps/tauri-action@v0
