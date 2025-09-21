@@ -56,7 +56,7 @@ export default function FocusPage() {
 
   return (
     <MiniShell>
-      <div class="space-y-3">
+      <div class="space-y-3" style={{ width: "min(92vw, 600px)", margin: "0 auto" }}>
         <MiniPicker
           items={filtered()}
           value={focusedTaskId()}
@@ -98,14 +98,14 @@ export default function FocusPage() {
               }
             />
             <MiniActions>
-              <MiniButton
+            <MiniButton
                 onClick={() =>
                   openWindow({
                     label: `timer-${Date.now()}`,
                     title: "Timer",
                     url: `/timer?taskId=${currentTask()!.id}`,
-                    width: 420,
-                    height: 260,
+                    width: 480,
+                    height: 300,
                     alwaysOnTop: true,
                   })
                 }

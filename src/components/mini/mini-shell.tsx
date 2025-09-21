@@ -8,12 +8,18 @@ type MiniShellProps = {
 
 export default function MiniShell(props: MiniShellProps) {
   return (
-    <main class="min-h-screen w-screen bg-black text-white grid place-items-center">
+    <main class="h-screen w-screen bg-black text-white grid place-items-center overflow-hidden">
       <div
-        class={`w-full max-w-xl p-4 rounded-2xl border border-white/15 bg-black ${props.class || ""}`}
+        class={`box-border rounded-2xl bg-black overflow-hidden ${props.class || ""}`}
+        style={{
+          width: "clamp(300px, 94vw, 720px)",
+          height: "auto",
+          "max-height": "calc(100vh - 16px)",
+          padding: "clamp(8px, 3vw, 16px)",
+        }}
       >
         {props.title && (
-          <div class="text-sm mb-2 opacity-80">{props.title}</div>
+          <div class="text-sm mb-2 opacity-80 leading-tight">{props.title}</div>
         )}
         {props.children}
       </div>

@@ -71,6 +71,20 @@
     }
 }
 
+@layer base {
+    html, body, :root {
+        height: 100%;
+        width: 100%;
+        font-family: "Iosevka Slab", system-ui, -apple-system, "Segoe UI", Roboto, "Inter", Arial, sans-serif;
+    }
+    body {
+        margin: 0;
+    }
+    * {
+        font-feature-settings: "tnum" 1, "liga" 1, "calt" 1;
+    }
+}
+
 @layer utilities {
     .sheet-overlay[data-expanded] {
         animation: sheet-fade-in 160ms ease-out forwards;
@@ -354,4 +368,12 @@
 
 .font-pp-editorial {
     font-family: "PPEditorialNew-UltralightItalic", sans-serif;
+}
+
+@font-face {
+    font-family: "Iosevka Slab";
+    src: url("/fonts/IosevkaSlab-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
 }

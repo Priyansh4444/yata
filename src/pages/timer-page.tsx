@@ -310,7 +310,7 @@ export default function TimerPage() {
 
   return (
     <MiniShell title="Timer">
-      <div class="space-y-3 text-center">
+      <div class="space-y-3 text-center" style={{ width: "100%", "max-width": "600px" }}>
         <MiniPicker
           items={allTasks()}
           value={selectedTask()?.id ?? null}
@@ -324,13 +324,15 @@ export default function TimerPage() {
         >
           <div class="text-xs opacity-90">{selectedTask()!.header}</div>
 
-          <div class="text-5xl font-mono tracking-widest text-white">
+          <div class="text-white font-mono tracking-widest"
+               style={{ "font-size": "clamp(28px, 8vw, 56px)", "line-height": 1 }}>
             {formatTime(timerState().remaining)}
           </div>
 
           <MiniProgress value={progressValue()} />
 
-          <div class="flex items-center justify-center gap-2 text-xs text-white/80">
+          <div class="flex items-center justify-center gap-2 text-white/80"
+               style={{ "font-size": "clamp(10px, 2.6vw, 12px)" }}>
             <MiniButton onClick={setPomodoroMode}>Pomodoro</MiniButton>
             <span>
               Work {timerState().workMinutes}m · Break {timerState().breakMinutes}m
@@ -347,7 +349,7 @@ export default function TimerPage() {
             <MiniButton onClick={completeTask}>Move to Completed</MiniButton>
           </MiniActions>
 
-          <div class="text-xs opacity-80">
+          <div class="opacity-80" style={{ "font-size": "clamp(10px, 2.6vw, 12px)" }}>
             Est: {secondsToMinutes(selectedTask()!.estimatedSeconds || 0)} min · Done: {" "}
             {secondsToMinutes(selectedTask()!.timeSpentSeconds || 0)} min
           </div>

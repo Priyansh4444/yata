@@ -35,9 +35,9 @@ export default function KanbanBoard() {
       const next = hasCompleted
         ? loaded
         : [
-            ...loaded,
-            { id: COMPLETED_LIST_ID, header: "Completed", tasks: [] },
-          ];
+          ...loaded,
+          { id: COMPLETED_LIST_ID, header: "Completed", tasks: [] },
+        ];
       setLists(reconcile(next));
       if (next !== loaded) await saveBoard(next);
     } else {
@@ -141,14 +141,14 @@ export default function KanbanBoard() {
   };
 
   return (
-    <div class="kanban-board h-full flex flex-row gap-6 overflow-x-auto pb-4 scrollbar-black">
+    <div class="kanban-board h-full flex flex-row gap-6 overflow-x-auto pb-4 scrollbar-black" style={{ "max-height": "calc(100vh - 160px)" }}>
       <DragDropProvider
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
         collisionDetector={collisionDetector}
       >
         <DragDropSensors />
-        <div class="columns flex flex-row gap-6 items-start">
+        <div class="columns flex flex-row gap-4 sm:gap-6 items-start">
           <SortableProvider ids={listIds()}>
             <For each={lists}>
               {(list) => (
@@ -167,14 +167,14 @@ export default function KanbanBoard() {
           <Show when={!addingList()}>
             <button
               type="button"
-              class="min-w-[320px] w-[360px] max-w-[400px] h-[52px] rounded-xl border border-dashed border-white/10 text-zinc-400 hover:text-zinc-200 hover:border-white/20 bg-black/10"
+              class="min-w-[280px] sm:min-w-[320px] w-[320px] sm:w-[360px] max-w-[400px] h-[48px] sm:h-[52px] rounded-xl border border-dashed border-white/10 text-zinc-400 hover:text-zinc-200 hover:border-white/20 bg-black/10"
               onClick={() => setAddingList(true)}
             >
               + Add list
             </button>
           </Show>
           <Show when={addingList()}>
-            <div class="min-w-[320px] w-[360px] max-w-[400px]">
+            <div class="min-w-[280px] sm:min-w-[320px] w-[320px] sm:w-[360px] max-w-[400px]">
               <NewListCard
                 onAdd={addList}
                 onCancel={() => setAddingList(false)}
