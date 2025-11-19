@@ -23,7 +23,7 @@ Kanban-style tasks powered by Solid and Tauri. ✨
   
 </table>
 
-## Upcoming Features (by next year) 🚀
+## Upcoming Features (soon) 🚀
 
 - 🤖 Copilot-style autocomplete for fast task entry and editing
 - 🔗 Canvas LMS integration using the Canvas API to sync tasks and move them automatically
